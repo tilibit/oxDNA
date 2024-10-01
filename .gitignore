@@ -69,8 +69,15 @@ MANIFEST
 # Vim/gvim/vscode swp files
 .*.swp
 .vscode/
+.python-version
 
 # MacOS desktop servies
 .DS_Store
 
 select_compute_arch_laptop.cmake
+
+
+# Testing
+.coverage*
+.pytest*
+.tox
