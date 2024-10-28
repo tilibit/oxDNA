@@ -1,8 +1,13 @@
-#see: https://dna.physics.ox.ac.uk/index.php/Documentation#External_Forces
+# see: https://dna.physics.ox.ac.uk/index.php/Documentation#External_Forces
 # TODO: "group_name" and "id" need to be added as optional parameters to forces
-from typing import Dict, List, Literal
+from typing import Dict
+from typing import List
+from typing import Literal
 
-def mutual_trap(particle:int, ref_particle:int, stiff:float, r0:float, PBC:bool, rate:float=0, stiff_rate:float=0) -> Dict:
+
+def mutual_trap(
+    particle: int, ref_particle: int, stiff: float, r0: float, PBC: bool, rate: float = 0, stiff_rate: float = 0
+) -> Dict:
     """
     A spring force that pulls a particle towards the position of another particle
 
@@ -15,19 +20,19 @@ def mutual_trap(particle:int, ref_particle:int, stiff:float, r0:float, PBC:bool,
         rate (float): changes r0 by this much every time step
         stiff_rate (float): changes stiff by this much every time step
     """
-    return({
-        "type" : "mutual_trap",
-        "particle" : particle,
-        "ref_particle" : ref_particle,
-        "stiff" : stiff,
-        "stiff_rate" : stiff_rate, 
-        "r0" : r0,
-        "rate" : rate,
-        "PBC" : int(PBC)
-    })
+    return {
+        "type": "mutual_trap",
+        "particle": particle,
+        "ref_particle": ref_particle,
+        "stiff": stiff,
+        "stiff_rate": stiff_rate,
+        "r0": r0,
+        "rate": rate,
+        "PBC": int(PBC),
+    }
 
 
-def string(particle:int, f0:float, rate:float, direction:List[float]) -> Dict:
+def string(particle: int, f0: float, rate: float, direction: List[float]) -> Dict:
     """
     A linear force along a vector
 
@@ -37,16 +42,10 @@ def string(particle:int, f0:float, rate:float, direction:List[float]) -> Dict:
         rate (float): growing rate of the force (simulation units/timestep)
         direction ([float, float, float]): the direction of the force
     """
-    return({
-        "type" : "string",
-        "particle" : particle, 
-        "f0" : f0, 
-        "rate" : rate, 
-        "dir" : direction 
-    })
+    return {"type": "string", "particle": particle, "f0": f0, "rate": rate, "dir": direction}
 
 
-def harmonic_trap(particle:int, pos0:List[float], stiff:float, rate:float, direction:List[float]) -> Dict:
+def harmonic_trap(particle: int, pos0: List[float], stiff: float, rate: float, direction: List[float]) -> Dict:
     """
     A linear potential well that traps a particle
 
@@ -57,17 +56,19 @@ def harmonic_trap(particle:int, pos0:List[float], stiff:float, rate:float, direc
         rate (float): the velocity of the trap (simulation units/time step)
         direction ([float, float, float]): the direction of movement of the trap
     """
-    return({
-        "type" : "trap",
-        "particle" : particle, 
-        "pos0" : pos0,
-        "stiff" : stiff,
-        "rate" : rate,
-        "dir" : direction
-    })
+    return {"type": "trap", "particle": particle, "pos0": pos0, "stiff": stiff, "rate": rate, "dir": direction}
 
 
-def rotating_harmonic_trap(particle:int, pos0:List[float], stiff:float, rate:float, base:float, center:List[float], axis:List[float], mask:List[float]) -> Dict:
+def rotating_harmonic_trap(
+    particle: int,
+    pos0: List[float],
+    stiff: float,
+    rate: float,
+    base: float,
+    center: List[float],
+    axis: List[float],
+    mask: List[float],
+) -> Dict:
     """
     A harmonic trap that rotates in space with constant angular velocity
 
@@ -81,20 +82,20 @@ def rotating_harmonic_trap(particle:int, pos0:List[float], stiff:float, rate:flo
         axis ([float, float, float]): the rotation axis of the trap
         mask ([float, float, float]): the masking vector of the trap (force vector is element-wise multiplied by mask)
     """
-    return({
-        "type" : "twist", 
-        "particle" : particle,
-        "stiff" : stiff,
-        "rate" : rate,
-        "base" : base,
-        "pos0" : pos0,
-        "center" : center,
-        "axis" : axis,
-        "mask" : mask
-    })
+    return {
+        "type": "twist",
+        "particle": particle,
+        "stiff": stiff,
+        "rate": rate,
+        "base": base,
+        "pos0": pos0,
+        "center": center,
+        "axis": axis,
+        "mask": mask,
+    }
 
 
-def repulsion_plane(particle:int, stiff:float, direction:List[float], position:List[float]) -> Dict:
+def repulsion_plane(particle: int, stiff: float, direction: List[float], position: List[float]) -> Dict:
     """
     A plane that forces the affected particle to stay on one side.
 
@@ -104,16 +105,10 @@ def repulsion_plane(particle:int, stiff:float, direction:List[float], position:L
         direction ([float, float, float]): the normal vecor to the plane
         position ([float, float, float]): position of the plane (plane is d0*x + d1*y + d2*z + position = 0)
     """
-    return({
-        "type" : "repulsion_plane",
-        "particle" : particle,
-        "stiff" : stiff,
-        "dir" : direction,
-        "position" : position
-    })
+    return {"type": "repulsion_plane", "particle": particle, "stiff": stiff, "dir": direction, "position": position}
 
 
-def attraction_plane(particle:int, stiff:float, direction:List[float], position:List[float]) -> Dict:
+def attraction_plane(particle: int, stiff: float, direction: List[float], position: List[float]) -> Dict:
     """
     A plane that pulls the affected particle towards it while staying on one side.
 
@@ -123,19 +118,13 @@ def attraction_plane(particle:int, stiff:float, direction:List[float], position:
         direction ([float, float, float]): the normal vector to the plane
         position ([float, float, float]): position of the plane (plane is d0*x + d1*y + d2*z + position = 0)
     """
-    return({
-        "type" : "attraction_plane",
-        "particle" : particle,
-        "stiff" : stiff,
-        "dir" : direction,
-        "position" : position
-    })
+    return {"type": "attraction_plane", "particle": particle, "stiff": stiff, "dir": direction, "position": position}
 
 
-def repulsion_sphere(particle:int, center:List[float], stiff:float, r0:float, rate:float) -> Dict:
+def repulsion_sphere(particle: int, center: List[float], stiff: float, r0: float, rate: float) -> Dict:
     """
     A sphere that encloses the particle
-    
+
     Parameters:
         particle (int): the particle that the force acts upon
         center ([float, float, float]): the center of the sphere
@@ -143,11 +132,4 @@ def repulsion_sphere(particle:int, center:List[float], stiff:float, r0:float, ra
         r0 (float): radius of sphere at t=0
         rate (float): the sphere's radius changes to r = r0 + rate*t
     """
-    return({
-        "type" : "sphere",
-        "particle" : particle,
-        "center" : center,
-        "stiff" : stiff,
-        "r0" : r0,
-        "rate" : rate
-    })
+    return {"type": "sphere", "particle": particle, "center": center, "stiff": stiff, "r0": r0, "rate": rate}

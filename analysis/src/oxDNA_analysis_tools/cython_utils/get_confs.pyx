@@ -1,7 +1,7 @@
 import cython
 import numpy as np
 cimport numpy as numpy
-from cpython.bytes cimport PyBytes_Size 
+from cpython.bytes cimport PyBytes_Size
 from libc.stdio cimport fopen, fclose, fread, fseek, FILE
 from libc.string cimport strtok, strcpy, strlen
 from libc.stdlib cimport atoi, atof, atol, malloc, free
@@ -76,7 +76,7 @@ def cget_confs(list idxs, str traj_path, int start, int nconfs, int nbases, bint
 cdef parse_conf(char *chunk, int start_byte, int nbases, bint incl_vel=1):
     cdef int THREE = 3
     cdef numpy.int64_t time #Windows and Unix use different precision for time. Using `long` means long trajectories can't be loaded on Windows systems.
-    
+
     #allocate some memory for our configuration
     cdef cbox    = np.zeros(3, dtype = np.float64)
     cdef cenergy = np.zeros(3, dtype = np.float64)
@@ -104,7 +104,7 @@ cdef parse_conf(char *chunk, int start_byte, int nbases, bint incl_vel=1):
         cbox[j] = atof(ptr)
         ptr = strtok(NULL, ' ')
     ptr = strtok(NULL, '\nE =')
-    
+
     cenergy[0] = atof(ptr)
     ptr = strtok(NULL, ' ')
     cenergy[1] = atof(ptr)
@@ -140,10 +140,10 @@ cdef parse_conf(char *chunk, int start_byte, int nbases, bint incl_vel=1):
             ca3s[i*THREE+2] = atof(ptr)
 
     return Configuration(
-                time, 
-                cbox, 
-                cenergy, 
+                time,
+                cbox,
+                cenergy,
                 cposes.reshape(nbases, THREE),
-                ca1s.reshape(nbases, THREE), 
+                ca1s.reshape(nbases, THREE),
                 ca3s.reshape(nbases, THREE)
             )

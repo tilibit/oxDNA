@@ -17,11 +17,11 @@ def get_angle(a, b):
 
     """
     ab = np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
-    if ab > (1. - FLT_EPSILON): 
+    if ab > (1.0 - FLT_EPSILON):
         return 0
-    elif ab < (-1. + FLT_EPSILON): 
+    elif ab < (-1.0 + FLT_EPSILON):
         return np.pi
-    else: 
+    else:
         return np.arccos(ab)
 
 
@@ -55,15 +55,15 @@ def get_random_vector_in_sphere(r=1):
 
 
 def get_random_vector():
-    ransq = 1.
+    ransq = 1.0
 
-    while ransq >= 1.:
-        ran1 = 1. - 2. * np.random.random()
-        ran2 = 1. - 2. * np.random.random()
+    while ransq >= 1.0:
+        ran1 = 1.0 - 2.0 * np.random.random()
+        ran2 = 1.0 - 2.0 * np.random.random()
         ransq = ran1 * ran1 + ran2 * ran2
 
-    ranh = 2. * np.sqrt(1. - ransq)
-    return np.array([ran1 * ranh, ran2 * ranh, 1. - 2. * ransq])
+    ranh = 2.0 * np.sqrt(1.0 - ransq)
+    return np.array([ran1 * ranh, ran2 * ranh, 1.0 - 2.0 * ransq])
 
 
 def get_random_rotation_matrix():
@@ -71,7 +71,8 @@ def get_random_rotation_matrix():
 
     R = np.array([v1, v2, v3])
     # rotations have det == 1
-    if np.linalg.det(R) < 0: R = np.array([v2, v1, v3])
+    if np.linalg.det(R) < 0:
+        R = np.array([v2, v1, v3])
 
     return R
 
@@ -79,9 +80,13 @@ def get_random_rotation_matrix():
 def get_rotation_matrix(axis, angle):
     ct = np.cos(angle)
     st = np.sin(angle)
-    olc = 1. - ct
+    olc = 1.0 - ct
     x, y, z = axis / np.linalg.norm(axis)
 
-    return np.array([[olc * x * x + ct, olc * x * y - st * z, olc * x * z + st * y],
-                    [olc * x * y + st * z, olc * y * y + ct, olc * y * z - st * x],
-                    [olc * x * z - st * y, olc * y * z + st * x, olc * z * z + ct]])
+    return np.array(
+        [
+            [olc * x * x + ct, olc * x * y - st * z, olc * x * z + st * y],
+            [olc * x * y + st * z, olc * y * y + ct, olc * y * z - st * x],
+            [olc * x * z - st * y, olc * y * z + st * x, olc * z * z + ct],
+        ]
+    )

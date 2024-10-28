@@ -1,46 +1,54 @@
 import argparse
-from os import path
-from collections import namedtuple
-from typing import Tuple, Dict
-from json import dump
-import numpy as np
-import matplotlib.pyplot as plt
-import oxpy
-from oxDNA_analysis_tools.UTILS.data_structures import TopInfo, TrajInfo
-from oxDNA_analysis_tools.UTILS.oat_multiprocesser import oat_multiprocesser, get_chunk_size
-from oxDNA_analysis_tools.UTILS.RyeReader import describe, get_input_parameter
-from oxDNA_analysis_tools.UTILS.logger import log, logger_settings
-
 import time
+from collections import namedtuple
+from json import dump
+from os import path
+from typing import Dict
+from typing import Tuple
+
+import matplotlib.pyplot as plt
+import numpy as np
+import oxpy
+from oxDNA_analysis_tools.UTILS.data_structures import TopInfo
+from oxDNA_analysis_tools.UTILS.data_structures import TrajInfo
+from oxDNA_analysis_tools.UTILS.logger import log
+from oxDNA_analysis_tools.UTILS.logger import logger_settings
+from oxDNA_analysis_tools.UTILS.oat_multiprocesser import get_chunk_size
+from oxDNA_analysis_tools.UTILS.oat_multiprocesser import oat_multiprocesser
+from oxDNA_analysis_tools.UTILS.RyeReader import describe
+from oxDNA_analysis_tools.UTILS.RyeReader import get_input_parameter
+
 start_time = time.time()
 
-ComputeContext = namedtuple("ComputeContext",["traj_info",
-                                              "top_info",
-                                              "designed_pairs",
-                                              "input_file"])
+ComputeContext = namedtuple("ComputeContext", ["traj_info", "top_info", "designed_pairs", "input_file"])
+
 
 # This is the function which gets parallelized
-def compute(ctx:ComputeContext, chunk_size:int, chunk_id:int) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def compute(
+    ctx: ComputeContext, chunk_size: int, chunk_id: int
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     # Create the oxpy context
     with oxpy.Context():
-        inp = oxpy.InputFile()                      # Create an empty input file
-        inp.init_from_filename(ctx.input_file)      # Fill in input file with the provided input
+        inp = oxpy.InputFile()  # Create an empty input file
+        inp.init_from_filename(ctx.input_file)  # Fill in input file with the provided input
 
         # Modify the input file to analyze the target trajectory and select a chunk to analyze
-        inp["list_type"] = "cells"                   
+        inp["list_type"] = "cells"
         inp["trajectory_file"] = ctx.traj_info.path
-        inp["analysis_bytes_to_skip"] = str(ctx.traj_info.idxs[chunk_id*chunk_size].offset)
+        inp["analysis_bytes_to_skip"] = str(ctx.traj_info.idxs[chunk_id * chunk_size].offset)
         inp["confs_to_analyse"] = str(chunk_size)
 
         # Use oxDNA's observables interface to define what parameter we want to measure
-        inp["analysis_data_output_1"] = '{ \n name = stdout \n print_every = 1e10 \n col_1 = { \n id = my_obs \n type = hb_list \n } \n }'
+        inp["analysis_data_output_1"] = (
+            "{ \n name = stdout \n print_every = 1e10 \n col_1 = { \n id = my_obs \n type = hb_list \n } \n }"
+        )
 
         if (not inp["use_average_seq"] or inp.get_bool("use_average_seq")) and "RNA" in inp["interaction_type"]:
             log("Sequence dependence not set for RNA model, wobble base pairs will be ignored", level="warning")
 
         # Start up an analysis backend with the input file we just made
         backend = oxpy.analysis.AnalysisBackend(inp)
-    
+
         # The parameters we're going to read from the trajectory
         i = 0
         count_correct_bonds = []
@@ -53,7 +61,13 @@ def compute(ctx:ComputeContext, chunk_size:int, chunk_id:int) -> Tuple[np.ndarra
             conf_corr_bonds = 0
             conf_incorr_bonds = 0
             conf_tot_bonds = 0
-            pairs = backend.config_info().get_observable_by_id("my_obs").get_output_string(backend.config_info().current_step).strip().split('\n')
+            pairs = (
+                backend.config_info()
+                .get_observable_by_id("my_obs")
+                .get_output_string(backend.config_info().current_step)
+                .strip()
+                .split("\n")
+            )
             for p in pairs[1:]:
                 p = p.split()
                 a = int(p[0])
@@ -73,27 +87,29 @@ def compute(ctx:ComputeContext, chunk_size:int, chunk_id:int) -> Tuple[np.ndarra
             tot_bonds.append(conf_tot_bonds)
 
     # Send the processed data back to the main process
-    return(np.array(tot_bonds), np.array(count_correct_bonds), np.array(count_incorrect_bonds), out_array)
+    return (np.array(tot_bonds), np.array(count_correct_bonds), np.array(count_incorrect_bonds), out_array)
 
 
-def bond_analysis(traj_info:TrajInfo, top_info:TopInfo, pairs:Dict[int, int], inputfile:str, ncpus:int=1) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    '''
-        Compare the bond occupancy of a trajectory with a designed structure
+def bond_analysis(
+    traj_info: TrajInfo, top_info: TopInfo, pairs: Dict[int, int], inputfile: str, ncpus: int = 1
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Compare the bond occupancy of a trajectory with a designed structure
 
-        Parameters: 
-            traj_info (TrajInfo): Object containing the trajectory information
-            top_info (TopInfo): Object containing the topology information
-            pairs (dict): Designed pairs ({p1 : q1, p2 : q2})
-            inputfile (str): The path to the input file used to run the simulation
-            ncpus (int): (optional) number of cores to use
+    Parameters:
+        traj_info (TrajInfo): Object containing the trajectory information
+        top_info (TopInfo): Object containing the topology information
+        pairs (dict): Designed pairs ({p1 : q1, p2 : q2})
+        inputfile (str): The path to the input file used to run the simulation
+        ncpus (int): (optional) number of cores to use
 
-        Returns:
-            Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-            | Number of formed bonds among the specified nucleotides at each step in the simulation
-            | Number of missbonds among specified nucleotides at each step in the simulation
-            | Number of correct bonds among specified nucleotides at each step in the simulation
-            | Per-nucleotide correct bond occupancy
-    '''
+    Returns:
+        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        | Number of formed bonds among the specified nucleotides at each step in the simulation
+        | Number of missbonds among specified nucleotides at each step in the simulation
+        | Number of correct bonds among specified nucleotides at each step in the simulation
+        | Per-nucleotide correct bond occupancy
+    """
     # oat_multiprocessor requires all arguments to compute be passed as a single variable.  We use a namedtuple for this.
     ctx = ComputeContext(traj_info, top_info, pairs, inputfile)
 
@@ -105,62 +121,104 @@ def bond_analysis(traj_info:TrajInfo, top_info:TopInfo, pairs:Dict[int, int], in
 
     # The callback function defines what to do with the returned data when a chunk is finished processing
     chunk_size = get_chunk_size()
+
     def callback(i, r):
         nonlocal total_bonds, correct_bonds, incorrect_bonds, nt_array
-        total_bonds[i*chunk_size:i*chunk_size+len(r[0])] = r[0]
-        correct_bonds[i*chunk_size:i*chunk_size+len(r[1])] = r[1]
-        incorrect_bonds[i*chunk_size:i*chunk_size+len(r[2])] = r[2]
+        total_bonds[i * chunk_size : i * chunk_size + len(r[0])] = r[0]
+        correct_bonds[i * chunk_size : i * chunk_size + len(r[1])] = r[1]
+        incorrect_bonds[i * chunk_size : i * chunk_size + len(r[2])] = r[2]
         nt_array += r[3]
 
     # Run the <compute> function on <ncpus> over <nconfs> with arguments <ctx> and catch the return with <callback>
     oat_multiprocesser(traj_info.nconfs, ncpus, compute, callback, ctx)
 
-    nt_array  = nt_array / traj_info.nconfs
+    nt_array = nt_array / traj_info.nconfs
 
-    return(total_bonds, correct_bonds, incorrect_bonds, nt_array)
+    return (total_bonds, correct_bonds, incorrect_bonds, nt_array)
 
-def oxView_overlay(nt_array:np.ndarray, outfile:str):
-    log("Writing bond occupancy data to {}".format(outfile))
+
+def oxView_overlay(nt_array: np.ndarray, outfile: str):
+    log(f"Writing bond occupancy data to {outfile}")
     with open(outfile, "w+") as file:
-        file.write("{\n\"occupancy\" : [")
+        file.write('{\n"occupancy" : [')
         file.write(str(nt_array[0]))
         for n in nt_array[1:]:
-            file.write(", {}".format(n))
+            file.write(f", {n}")
         file.write("] \n}")
     return
 
-def plot_trajectories(correct_bonds:np.ndarray, incorrect_bonds:np.ndarray, designed_bonds:int, plotname:str):
+
+def plot_trajectories(correct_bonds: np.ndarray, incorrect_bonds: np.ndarray, designed_bonds: int, plotname: str):
     fig, ax = plt.subplots()
     ax.plot(correct_bonds, alpha=0.5, label="Correct bonds")
     ax.plot(incorrect_bonds, alpha=0.5, label="Incorrect bonds")
-    ax.axhline(designed_bonds, alpha=0.3, color='red', label="Designed bonds")
-    plt.xlabel('Configuration')
-    plt.ylabel('Number of Bonds')
+    ax.axhline(designed_bonds, alpha=0.3, color="red", label="Designed bonds")
+    plt.xlabel("Configuration")
+    plt.ylabel("Number of Bonds")
     plt.legend()
     plt.tight_layout()
     plt.savefig(plotname)
     return
 
+
 def cli_parser(prog="bond_analysis.py"):
-    #read data from files
-    parser = argparse.ArgumentParser(prog = prog, description="Compare the bonds found at each trajectory with the intended design")
-    parser.add_argument('inputfile', type=str, help="The inputfile used to run the simulation")
-    parser.add_argument('trajectory', type=str, help="The trajecotry file to compare against the designed pairs")
-    parser.add_argument('designed_pairs', type=str, help="The file containing the desired nucleotides pairings in the format `a b`")
-    parser.add_argument('-o', '--output',metavar='output_file', type=str, dest='outfile', help="Name of the file to save the output oxView overlay to")
-    parser.add_argument('-t', '--plot', metavar='trajectory_plot', type=str, dest='traj_plot', help='Name of the file to save the trajecotry plot to')
-    parser.add_argument('-d', '--data', metavar='data_file', type=str, dest='data_file', help="If set, save the data used to make the plot to a json file.")
-    parser.add_argument('-p', '--parallel', metavar='num_cpus', type=int, dest='parallel', help="(optional) How many cores to use")
-    parser.add_argument('-q', '--quiet', metavar='quiet', dest='quiet', action='store_const', const=True, default=False, help="Don't print 'INFO' messages to stderr")
+    # read data from files
+    parser = argparse.ArgumentParser(
+        prog=prog, description="Compare the bonds found at each trajectory with the intended design"
+    )
+    parser.add_argument("inputfile", type=str, help="The inputfile used to run the simulation")
+    parser.add_argument("trajectory", type=str, help="The trajecotry file to compare against the designed pairs")
+    parser.add_argument(
+        "designed_pairs", type=str, help="The file containing the desired nucleotides pairings in the format `a b`"
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        metavar="output_file",
+        type=str,
+        dest="outfile",
+        help="Name of the file to save the output oxView overlay to",
+    )
+    parser.add_argument(
+        "-t",
+        "--plot",
+        metavar="trajectory_plot",
+        type=str,
+        dest="traj_plot",
+        help="Name of the file to save the trajecotry plot to",
+    )
+    parser.add_argument(
+        "-d",
+        "--data",
+        metavar="data_file",
+        type=str,
+        dest="data_file",
+        help="If set, save the data used to make the plot to a json file.",
+    )
+    parser.add_argument(
+        "-p", "--parallel", metavar="num_cpus", type=int, dest="parallel", help="(optional) How many cores to use"
+    )
+    parser.add_argument(
+        "-q",
+        "--quiet",
+        metavar="quiet",
+        dest="quiet",
+        action="store_const",
+        const=True,
+        default=False,
+        help="Don't print 'INFO' messages to stderr",
+    )
     return parser
+
 
 def main():
     parser = cli_parser(path.basename(__file__))
     args = parser.parse_args()
 
-    #run system checks
+    # run system checks
     logger_settings.set_quiet(args.quiet)
     from oxDNA_analysis_tools.config import check
+
     check(["python", "numpy", "oxpy"])
 
     # Parse CLI input
@@ -169,29 +227,31 @@ def main():
     designfile = args.designed_pairs
     if args.outfile:
         outfile = args.outfile
-        outfile = outfile.removesuffix(".json")+".json"
+        outfile = outfile.removesuffix(".json") + ".json"
     else:
-        outfile = 'bonds.json'
-        log("No oxView name provided, defaulting to \"{}\"".format(outfile))
+        outfile = "bonds.json"
+        log(f'No oxView name provided, defaulting to "{outfile}"')
     if args.traj_plot:
         plotfile = args.traj_plot
-        plotfile = plotfile.removesuffix(".png")+".png"
+        plotfile = plotfile.removesuffix(".png") + ".png"
     else:
-        plotfile = 'bonds.png'
-        log("No bond plot name provided, defaulting to \"{}\"".format(plotfile))
+        plotfile = "bonds.png"
+        log(f'No bond plot name provided, defaulting to "{plotfile}"')
 
     # Get trajectory metadata
     top_file = get_input_parameter(inputfile, "topology")
     if not path.exists(top_file):
-        raise RuntimeError("Topology '{}' not found, the topology specified in the input file must be present.".format(top_file))
-    
+        raise RuntimeError(
+            f"Topology '{top_file}' not found, the topology specified in the input file must be present."
+        )
+
     top_info, traj_info = describe(top_file, traj_file)
 
     # Convert the designed pairs into a dict
-    with open(designfile, 'r') as file:
+    with open(designfile) as file:
         pairs_txt = file.readlines()
 
-    pairs = {int(p[0]) : int(p[1]) for p in [p.split() for p in pairs_txt]}
+    pairs = {int(p[0]): int(p[1]) for p in [p.split() for p in pairs_txt]}
 
     if args.parallel:
         ncpus = args.parallel
@@ -202,25 +262,31 @@ def main():
     total_bonds, correct_bonds, incorrect_bonds, nt_array = bond_analysis(traj_info, top_info, pairs, inputfile, ncpus)
 
     # Summarize output and generate output filess
-    print("\nSummary:\navg bonds: {}\navg correct bonds: {}/{}\navg missbonds: {}".format(np.mean(total_bonds),np.mean(correct_bonds), len(pairs), np.mean(incorrect_bonds)))
+    print(
+        "\nSummary:\navg bonds: {}\navg correct bonds: {}/{}\navg missbonds: {}".format(
+            np.mean(total_bonds), np.mean(correct_bonds), len(pairs), np.mean(incorrect_bonds)
+        )
+    )
 
     if args.data_file:
-        data_file = args.data_file.removesuffix(".json")+".json"
-        with open(data_file, 'w+') as f:
+        data_file = args.data_file.removesuffix(".json") + ".json"
+        with open(data_file, "w+") as f:
             dump(
                 {
-                    "total_bonds" : total_bonds.tolist(),
-                    "correct_bonds" : correct_bonds.tolist(),
-                    "incorrect_bonds" : incorrect_bonds.tolist()
-                }, f
+                    "total_bonds": total_bonds.tolist(),
+                    "correct_bonds": correct_bonds.tolist(),
+                    "incorrect_bonds": incorrect_bonds.tolist(),
+                },
+                f,
             )
             log(f"Wrote per-step and per-nucleotide bond data to {data_file}")
-    
+
     oxView_overlay(nt_array, outfile)
 
     plot_trajectories(correct_bonds, incorrect_bonds, len(pairs), plotfile)
 
     print("--- %s seconds ---" % (time.time() - start_time))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

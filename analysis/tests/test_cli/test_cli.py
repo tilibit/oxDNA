@@ -1,7 +1,8 @@
-from oxDNA_analysis_tools.align import align
-from oxDNA_analysis_tools.UTILS.logger import log
 import time
 from pathlib import Path
+
+from oxDNA_analysis_tools.align import align
+from oxDNA_analysis_tools.UTILS.logger import log
 
 
 def test_align(align_input):

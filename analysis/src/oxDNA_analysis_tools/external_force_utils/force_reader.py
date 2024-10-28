@@ -1,6 +1,9 @@
-from typing import List, Dict
+from typing import Dict
+from typing import List
+
 from oxDNA_analysis_tools.external_force_utils import forces
 from oxDNA_analysis_tools.UTILS.logger import log
+
 
 def read_force_file(file: str) -> List[Dict]:
     """
@@ -13,31 +16,31 @@ def read_force_file(file: str) -> List[Dict]:
         force_list (list): a list of force dictionaries
     """
     force_list = []
-    with open(file, 'r') as f:
+    with open(file) as f:
         l = f.readline()
         while l:
-            if "{" in l:  #new force
+            if "{" in l:  # new force
                 l = f.readline()
                 args = {}
-                while "}" not in l: #read until end of description
+                while "}" not in l:  # read until end of description
                     l = l.split("=")
                     if l[0].strip() == "type":
                         t = l[1].strip()
                     else:
                         value = l[1].strip()
-                        if len(value.split(' ')) != 1:
-                            value =  [int(v) if v.isdigit() else float(v) for v in value.split(' ')]
+                        if len(value.split(" ")) != 1:
+                            value = [int(v) if v.isdigit() else float(v) for v in value.split(" ")]
                         else:
                             value = int(value) if value.isdigit() else float(value)
                         args[l[0].strip()] = value
                     l = f.readline()
-                force_list.append(getattr(forces, t)(**args)) #calls the function "t" from module "forces"
+                force_list.append(getattr(forces, t)(**args))  # calls the function "t" from module "forces"
             l = f.readline()
-    log("read {} forces".format(len(force_list)))
-    return(force_list)
+    log(f"read {len(force_list)} forces")
+    return force_list
 
 
-def write_force_file(force_list, filename, mode='w+'):
+def write_force_file(force_list, filename, mode="w+"):
     """
     Write a list of forces out to a file.
 
@@ -52,7 +55,7 @@ def write_force_file(force_list, filename, mode='w+'):
         for force in force_list:
             out += "{\n"
             for k in force.keys():
-                out += "{} = ".format(k)
+                out += f"{k} = "
                 if isinstance(force[k], list):
                     out += ", ".join(force[k])
                 else:

@@ -8,7 +8,7 @@ python -m build
 
 #Can't upload system-specific wheels to PyPi.  Use auditwheel to make a generic Linux wheel and remove my own wheel.
 auditwheel repair dist/*cp39-cp39-linux_x86_64.whl
-rm dist/*.whl 
+rm dist/*.whl
 mv wheelhouse/* dist/
 rm -r wheelhouse
 

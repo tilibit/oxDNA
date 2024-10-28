@@ -2,14 +2,19 @@ import argparse
 import os
 from pathlib import Path
 from typing import List
+
 import numpy as np
-from oxDNA_analysis_tools.UTILS.logger import log, logger_settings
-from oxDNA_analysis_tools.UTILS.RyeReader import get_confs, describe, inbox, write_conf
-from oxDNA_analysis_tools.UTILS.data_structures import Configuration
 from oxDNA_analysis_tools.align import svd_align
+from oxDNA_analysis_tools.UTILS.data_structures import Configuration
+from oxDNA_analysis_tools.UTILS.logger import log
+from oxDNA_analysis_tools.UTILS.logger import logger_settings
+from oxDNA_analysis_tools.UTILS.RyeReader import describe
+from oxDNA_analysis_tools.UTILS.RyeReader import get_confs
+from oxDNA_analysis_tools.UTILS.RyeReader import inbox
+from oxDNA_analysis_tools.UTILS.RyeReader import write_conf
 
 
-def superimpose(ref:Configuration, victims:List[str], indexes:np.ndarray=np.array([[]])):
+def superimpose(ref: Configuration, victims: List[str], indexes: np.ndarray = np.array([[]])):
     """
     Superimposes one or more structures sharing a topology to a reference structure
 
@@ -24,7 +29,7 @@ def superimpose(ref:Configuration, victims:List[str], indexes:np.ndarray=np.arra
 
     if not (indexes.ndim and indexes.size):
         indexes = np.array(range(len(ref.positions)), dtype=int)
-        indexes = np.tile(indexes, (len(victims)+1, 1))
+        indexes = np.tile(indexes, (len(victims) + 1, 1))
 
     ref = inbox(ref)
     reference_coords = ref.positions[indexes[0]]
@@ -37,8 +42,8 @@ def superimpose(ref:Configuration, victims:List[str], indexes:np.ndarray=np.arra
         conf = inbox(conf)
         np_coords = np.asarray([conf.positions, conf.a1s, conf.a3s])
 
-        conf.positions, conf.a1s, conf.a3s = svd_align(reference_coords, np_coords, indexes[i+1])
-        sd = np.square(conf.positions[indexes[i+1]] - reference_coords)
+        conf.positions, conf.a1s, conf.a3s = svd_align(reference_coords, np_coords, indexes[i + 1])
+        sd = np.square(conf.positions[indexes[i + 1]] - reference_coords)
         rmsd = np.sqrt(np.mean(sd))
 
         rmsds.append(rmsd)
@@ -46,25 +51,54 @@ def superimpose(ref:Configuration, victims:List[str], indexes:np.ndarray=np.arra
 
     return aligned, rmsds
 
+
 def cli_parser(prog="superimpose.py"):
-    parser = argparse.ArgumentParser(prog = prog, description="superimposes one or more structures sharing a topology to a reference structure")
-    parser.add_argument('reference', type=str, nargs=1, help="The reference configuration to superimpose to")
-    parser.add_argument('victims', type=str, nargs='+', help="The configurations to superimpose on the reference")
-    parser.add_argument('-i', '--index', metavar='index_file(s)', dest='index_files', nargs='+', help='Align to only a subset of particles from a space-separated list in the provided file. If 1 file provided, the indexing is applied to all structures. Otherwise an equal number of indexes and configurations must be provided.')
-    parser.add_argument('-o', '--output', metavar='output_names', dest='output_names', type=str, nargs='+', help='The names of the output files (defaults to inputname_a.dat)')
-    parser.add_argument('-q', '--quiet', metavar='quiet', dest='quiet', action='store_const', const=True, default=False, help="Don't print 'INFO' messages to stderr")
+    parser = argparse.ArgumentParser(
+        prog=prog, description="superimposes one or more structures sharing a topology to a reference structure"
+    )
+    parser.add_argument("reference", type=str, nargs=1, help="The reference configuration to superimpose to")
+    parser.add_argument("victims", type=str, nargs="+", help="The configurations to superimpose on the reference")
+    parser.add_argument(
+        "-i",
+        "--index",
+        metavar="index_file(s)",
+        dest="index_files",
+        nargs="+",
+        help="Align to only a subset of particles from a space-separated list in the provided file. If 1 file provided, the indexing is applied to all structures. Otherwise an equal number of indexes and configurations must be provided.",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        metavar="output_names",
+        dest="output_names",
+        type=str,
+        nargs="+",
+        help="The names of the output files (defaults to inputname_a.dat)",
+    )
+    parser.add_argument(
+        "-q",
+        "--quiet",
+        metavar="quiet",
+        dest="quiet",
+        action="store_const",
+        const=True,
+        default=False,
+        help="Don't print 'INFO' messages to stderr",
+    )
     return parser
 
+
 def main():
-    parser = cli_parser(os.path.basename(__file__))    
+    parser = cli_parser(os.path.basename(__file__))
     args = parser.parse_args()
 
     logger_settings.set_quiet(args.quiet)
-    #run system checks
+    # run system checks
     from oxDNA_analysis_tools.config import check
+
     check(["python", "numpy"])
 
-    #Get the reference configuration
+    # Get the reference configuration
     ref_file = args.reference[0]
     top_info, ref_info = describe(None, ref_file)
     ref_conf = get_confs(top_info, ref_info, 0, 1)[0]
@@ -77,19 +111,23 @@ def main():
     if args.index_files:
         index_files = args.index_files
         if len(index_files) == 1:
-            with open(index_files[0], 'r') as f:
+            with open(index_files[0]) as f:
                 indexes = f.readline().split()
                 try:
                     indexes = np.array([int(i) for i in indexes], dtype=int)
-                    indexes = np.tile(indexes, (len(args.victims)+1, 1))
+                    indexes = np.tile(indexes, (len(args.victims) + 1, 1))
                 except:
-                    raise RuntimeError("The index file must be a space-seperated list of particles.  These can be generated from an oxView selection by clicking the \"Selection IDs\" button")
+                    raise RuntimeError(
+                        'The index file must be a space-seperated list of particles.  These can be generated from an oxView selection by clicking the "Selection IDs" button'
+                    )
         else:
-            assert len(args.index_files) == len(args.victims) + 1, "The number of index files must match the number of input configuraitons."
+            assert (
+                len(args.index_files) == len(args.victims) + 1
+            ), "The number of index files must match the number of input configuraitons."
 
             indexes = []
             for idf in index_files:
-                with open(idf, 'r') as f:
+                with open(idf) as f:
                     idxs = f.readline().split()
                     indexes.append([int(i) for i in idxs])
 
@@ -97,14 +135,14 @@ def main():
                 indexes = np.array(indexes, dtype=int)
             except:
                 raise RuntimeError("All index files must contain the same number of IDs.")
-    else: 
+    else:
         indexes = np.array(range(top_info.nbases), dtype=int)
-        indexes = np.tile(indexes, (len(args.victims)+1, 1))
+        indexes = np.tile(indexes, (len(args.victims) + 1, 1))
 
-    if args.output_names :
+    if args.output_names:
         outputs = args.output_names
     else:
-        outputs = [Path(v).stem+'_a.dat' for v in args.victims]
+        outputs = [Path(v).stem + "_a.dat" for v in args.victims]
 
     aligned, rmsds = superimpose(ref_conf, args.victims, indexes)
     print("RMSDs:")
@@ -113,7 +151,8 @@ def main():
 
     for conf, out in zip(aligned, outputs):
         write_conf(out, conf, include_vel=ref_info.incl_v)
-        log("Wrote file {}".format(out))
+        log(f"Wrote file {out}")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

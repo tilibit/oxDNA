@@ -1,35 +1,55 @@
 import argparse
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
-import os
-from oxDNA_analysis_tools.UTILS.logger import log, logger_settings
+from oxDNA_analysis_tools.UTILS.logger import log
+from oxDNA_analysis_tools.UTILS.logger import logger_settings
+
 
 def cli_parser(prog="plot_energy.py"):
-    parser = argparse.ArgumentParser(prog = prog, description="Plot oxDNA energy files")
-    parser.add_argument('energy', nargs='+', help='Energy files to plot')
-    parser.add_argument('-o', '--output', metavar='output_file', nargs=1, help='The name to save the graph file to')
-    parser.add_argument('-f', '--format', metavar='<histogram/trajectory/both>', nargs=1, help='Output format for the graphs.  Defaults to histogram.  Options are \"histogram\", \"trajectory\", and \"both\"')
-    parser.add_argument('-q', '--quiet', metavar='quiet', dest='quiet', action='store_const', const=True, default=False, help="Don't print 'INFO' messages to stderr")
+    parser = argparse.ArgumentParser(prog=prog, description="Plot oxDNA energy files")
+    parser.add_argument("energy", nargs="+", help="Energy files to plot")
+    parser.add_argument("-o", "--output", metavar="output_file", nargs=1, help="The name to save the graph file to")
+    parser.add_argument(
+        "-f",
+        "--format",
+        metavar="<histogram/trajectory/both>",
+        nargs=1,
+        help='Output format for the graphs.  Defaults to histogram.  Options are "histogram", "trajectory", and "both"',
+    )
+    parser.add_argument(
+        "-q",
+        "--quiet",
+        metavar="quiet",
+        dest="quiet",
+        action="store_const",
+        const=True,
+        default=False,
+        help="Don't print 'INFO' messages to stderr",
+    )
     return parser
 
+
 def main():
-    parser = cli_parser(os.path.basename(__file__))    
+    parser = cli_parser(os.path.basename(__file__))
     args = parser.parse_args()
 
     logger_settings.set_quiet(args.quiet)
     from oxDNA_analysis_tools.config import check
+
     check(["python", "numpy", "matplotlib"])
 
-    #get file name
+    # get file name
     energy_files = args.energy
 
-    #-o names the output file
+    # -o names the output file
     if args.output:
         outfile = args.output[0]
     else:
-        outfile = 'energy.png'
+        outfile = "energy.png"
 
-    #-f defines which type of graph to produce
+    # -f defines which type of graph to produce
     hist = False
     line = False
     if args.format:
@@ -40,7 +60,7 @@ def main():
         if "both" in args.format:
             hist = line = True
         if hist == line == False:
-            raise RuntimeError("Unrecognized graph format\nAccepted formats are \"histogram\", \"trajectory\", and \"both\"")
+            raise RuntimeError('Unrecognized graph format\nAccepted formats are "histogram", "trajectory", and "both"')
     else:
         log("No graph format specified, defaulting to histogram")
         hist = True
@@ -50,7 +70,7 @@ def main():
     for efile in energy_files:
         times = []
         energies = []
-        with open(efile, 'r') as f:
+        with open(efile) as f:
             l = f.readline()
             while l:
                 times.append(float(l.split()[0]))
@@ -63,48 +83,56 @@ def main():
 
     if outfile and hist == True:
         if line == True:
-            out = outfile[:outfile.find(".")]+"_hist"+outfile[outfile.find("."):]
+            out = outfile[: outfile.find(".")] + "_hist" + outfile[outfile.find(".") :]
         else:
             out = outfile
-    
+
         bins = np.linspace(min([min(e) for e in all_energies]), max([max(e) for e in all_energies]), 40)
-    
+
         artists = []
-        for i,elist in enumerate(all_energies):
-            a = plt.hist(elist, bins, weights=np.ones(len(elist)) / len(elist),  alpha=0.3, label=names[i], histtype=u'stepfilled', edgecolor='k')
+        for i, elist in enumerate(all_energies):
+            a = plt.hist(
+                elist,
+                bins,
+                weights=np.ones(len(elist)) / len(elist),
+                alpha=0.3,
+                label=names[i],
+                histtype="stepfilled",
+                edgecolor="k",
+            )
             artists.append(a)
         plt.legend(labels=names)
         plt.xlabel("Energy per particle (SU)")
         plt.ylabel("Normalized frequency")
         if outfile:
-            log("Saving histogram to {}".format(out))
+            log(f"Saving histogram to {out}")
             plt.tight_layout()
             plt.savefig(out)
         else:
             plt.show()
 
-    #make a trajectory plot
+    # make a trajectory plot
     if outfile and line == True:
         if hist == True:
             plt.clf()
-            out = outfile[:outfile.find(".")]+"_traj"+outfile[outfile.find("."):]
+            out = outfile[: outfile.find(".")] + "_traj" + outfile[outfile.find(".") :]
         else:
             out = outfile
-        
+
         artists = []
-        for tlist,elist in zip(all_times, all_energies):
-            a = plt.plot(tlist, elist, alpha = 0.5)
+        for tlist, elist in zip(all_times, all_energies):
+            a = plt.plot(tlist, elist, alpha=0.5)
             artists.append(a)
         plt.legend(labels=names)
         plt.xlabel("Time (SU)")
         plt.ylabel("Energy (SU)")
         if outfile:
-            log("Saving line plot to {}".format(out))
+            log(f"Saving line plot to {out}")
             plt.tight_layout()
             plt.savefig(out)
         else:
             plt.show()
-    
-if __name__ == '__main__':
-    main()    
 
+
+if __name__ == "__main__":
+    main()
