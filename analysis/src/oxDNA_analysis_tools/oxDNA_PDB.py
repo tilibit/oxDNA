@@ -13,10 +13,11 @@ from oxDNA_analysis_tools.UTILS.pdb import Atom, PDB_Nucleotide, PDB_AminoAcid, 
 from oxDNA_analysis_tools.UTILS.RyeReader import get_confs, describe, strand_describe, inbox
 from oxDNA_analysis_tools.UTILS.data_structures import Strand, Configuration, System
 from oxDNA_analysis_tools.UTILS.logger import log, logger_settings
+from oxDNA_analysis_tools import get_resource
 import oxDNA_analysis_tools.UTILS.utils as utils
 
-DD12_PDB_PATH = "./UTILS/dd12_na.pdb"
-RNA_PDB_PATH = "./UTILS/2jxq.pdb"
+DD12_PDB_PATH = get_resource("./UTILS/dd12_na.pdb")
+RNA_PDB_PATH = get_resource("./UTILS/2jxq.pdb")
 
 number_to_DNAbase = {0 : 'A', 1 : 'G', 2 : 'C', 3 : 'T'}
 number_to_RNAbase = {0 : 'A', 1 : 'G', 2 : 'C', 3 : 'U'}

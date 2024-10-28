@@ -1,7 +1,8 @@
 import logging
 from pathlib import Path
 from shutil import copy
-from typing import Dict, Any
+from typing import Any
+from typing import Dict
 
 import pytest
 
@@ -16,13 +17,16 @@ INPUT_RNA = "input_rna"
 SEQUENCE_DEPS_RNA = "rna_sequence_dependent_parameters.txt"
 
 
+logger = logging.getLogger(__name__)
+
+
 def get_test_resource(file_name: str) -> Path:
     base_dir = Path.cwd()
-    return base_dir / "tests" / file_name
+    return base_dir / "tests" / "resources" / file_name
 
 
 @pytest.fixture(scope="session")
-def align_input(tmp_path_factory) -> Dict[str, Any]:
+def align_input(tmp_path_factory: pytest.FixtureRequest) -> Dict[str, Any]:
 
     dest_dir = tmp_path_factory.mktemp("test_cli")
     data = {}
