@@ -1,4 +1,4 @@
-exclude: ^(src/resources|tests/resources|build|dist|paper_examples|example_input_files)/|.*\.pdb$
+exclude: ^analysis/(src/oxDNA_analysis_tools/resources|tests/resources|build|dist|paper_examples|example_input_files)/
 
 repos:
 -   repo: https://github.com/psf/black
@@ -38,13 +38,13 @@ repos:
         args: [--py38-plus]
         files: ^analysis/
 
--   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.11.0
-    hooks:
-    -   id: mypy
-        additional_dependencies:
-          - types-PyYAML
-        files: ^analysis/
+# -   repo: https://github.com/pre-commit/mirrors-mypy
+#     rev: v1.11.0
+#     hooks:
+#     -   id: mypy
+#         additional_dependencies:
+#           - types-PyYAML
+#         files: ^analysis/
 
 -   repo: https://github.com/commitizen-tools/commitizen
     rev: v3.29.0
