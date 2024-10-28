@@ -1,0 +1,12 @@
+tox
+mypy
+black
+pre-commit
+pytest
+pytest-cov
+pytest-html
+pytest-lazy-fixtures
+mkdocs
+mkdocs-material
+mkdocstrings[python]
+mkdocs-click
