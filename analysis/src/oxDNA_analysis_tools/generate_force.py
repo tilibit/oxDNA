@@ -1,9 +1,10 @@
 import argparse
+import logging
 import os
 
 import oxpy
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
+
+logger = logging.getLogger(__name__)
 
 
 def cli_parser(prog="generate_force.py"):
@@ -36,7 +37,8 @@ def main():
     args = parser.parse_args()
 
     # Process command line arguments:
-    logger_settings.set_quiet(args.quiet)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
     inputfile = args.inputfile[0]
     conf_file = args.configuration[0]
 
@@ -49,7 +51,7 @@ def main():
         outfile = args.output[0]
     else:
         outfile = "forces.txt"
-        log(f'No outfile name provided, defaulting to "{outfile}"')
+        logger.info(f'No outfile name provided, defaulting to "{outfile}"')
 
     if args.pairs:
         pairsfile = args.pairs[0]
@@ -73,7 +75,7 @@ def main():
         )
 
         if (not inp["use_average_seq"] or inp.get_bool("use_average_seq")) and "RNA" in inp["interaction_type"]:
-            log("Sequence dependence not set for RNA model, wobble base pairs will be ignored", level="warning")
+            logger.warning("Sequence dependence not set for RNA model, wobble base pairs will be ignored")
 
         backend = oxpy.analysis.AnalysisBackend(inp)
 
@@ -110,11 +112,11 @@ def main():
     if pairsfile:
         with open(pairsfile, "w") as file:
             file.writelines(pairlines)
-            log(f"Wrote pairs to {pairsfile}")
+            logger.info(f"Wrote pairs to {pairsfile}")
 
     with open(outfile, "w") as file:
         file.writelines(lines)
-        log(f"Job finished. Wrote forces to {outfile}")
+        logger.info(f"Job finished. Wrote forces to {outfile}")
 
 
 if __name__ == "__main__":

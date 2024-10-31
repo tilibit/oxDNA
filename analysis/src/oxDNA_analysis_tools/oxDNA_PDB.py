@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import argparse
 import copy
+import logging
 import os
 import re
 from collections import defaultdict
@@ -15,8 +16,6 @@ from oxDNA_analysis_tools import get_resource
 from oxDNA_analysis_tools.UTILS.data_structures import Configuration
 from oxDNA_analysis_tools.UTILS.data_structures import Strand
 from oxDNA_analysis_tools.UTILS.data_structures import System
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
 from oxDNA_analysis_tools.UTILS.pdb import Atom
 from oxDNA_analysis_tools.UTILS.pdb import FROM_OXDNA_TO_ANGSTROM
 from oxDNA_analysis_tools.UTILS.pdb import PDB_AminoAcid
@@ -29,9 +28,10 @@ from oxDNA_analysis_tools.UTILS.RyeReader import strand_describe
 DD12_PDB_PATH = get_resource("./UTILS/dd12_na.pdb")
 RNA_PDB_PATH = get_resource("./UTILS/2jxq.pdb")
 
+logger = logging.getLogger(__name__)
+
 number_to_DNAbase = {0: "A", 1: "G", 2: "C", 3: "T"}
 number_to_RNAbase = {0: "A", 1: "G", 2: "C", 3: "U"}
-
 
 base_to_number = {"A": 0, "a": 0, "G": 1, "g": 1, "C": 2, "c": 2, "T": 3, "t": 3, "U": 3, "u": 3, "D": 4}
 
@@ -366,7 +366,7 @@ def oxDNA_PDB(
     # Process optional conditionals
     correct_for_large_boxes = False
     if np.any(box_angstrom[box_angstrom > 999]):
-        log(
+        logger.info(
             "At least one of the box sizes is larger than 999: all the atoms which are outside of the box will be brought back through periodic boundary conditions"
         )
         correct_for_large_boxes = True
@@ -390,7 +390,7 @@ def oxDNA_PDB(
             isDNA = True  # This should be in the strand parser instead.
             isDNA = strand.get_kwdata()["type"] == "DNA"
 
-            log(f"Converting strand {strand.id}", end="\r")
+            logger.info(f"Converting strand {strand.id}", end="\r")
 
             # Handle protein
             if strand.id < 0 and protein_pdb_files:
@@ -486,7 +486,7 @@ def oxDNA_PDB(
             # Chain ID can be any alphanumeric character.  Convention is A-Z, a-z, 0-9
             if one_file_per_strand:
                 out.close()
-                log(f"Wrote strand {strand.id}'s data to {out_name}")
+                logger.info(f"Wrote strand {strand.id}'s data to {out_name}")
                 chain_id = "A"
                 if strand != system.strands[-1]:
                     out_name = out_basename + "_{}.pdb".format(
@@ -500,13 +500,13 @@ def oxDNA_PDB(
                 elif chain_id == chr(ord("z") + 1):
                     chain_id = "1"
                 elif chain_id == chr(ord("0") + 1):
-                    log("More than 62 chains identified, looping chain identifier...", level="warning")
+                    logger.warning("More than 62 chains identified, looping chain identifier...")
                     chain_id = "A"
         print()
 
-    log(f"Wrote data to '{out_name}'")
+    logger.info(f"Wrote data to '{out_name}'")
 
-    log("DONE")
+    logger.info("DONE")
 
 
 def cli_parser(prog="oxDNA_PDB.py"):
@@ -583,7 +583,8 @@ def main():
     args = parser.parse_args()
 
     # Parse positional arguments
-    logger_settings.set_quiet(args.quiet)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
     top_file = args.topology
     conf_file = args.configuration
     direction = args.direction

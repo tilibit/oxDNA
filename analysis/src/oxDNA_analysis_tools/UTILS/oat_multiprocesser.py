@@ -1,9 +1,9 @@
+import logging
 from multiprocessing import Pool
 from typing import Callable
 from typing import NamedTuple
 
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
+logger = logging.getLogger(__name__)
 
 
 def get_chunk_size():
@@ -35,13 +35,15 @@ def oat_multiprocesser(nconfs: int, ncpus: int, function: Callable, callback: Ca
     # Figure out how many jobs we need to run
     nchunks = int(nconfs / chunk_size + (1 if nconfs % chunk_size else 0))
 
-    log(f"Processing in blocks of {chunk_size} configurations")
-    log(f"You can modify this number by running oat config -n <number>, which will be persistent between analyses.")
+    logger.info(f"Processing in blocks of {chunk_size} configurations")
+    logger.info(
+        f"You can modify this number by running oat config -n <number>, which will be persistent between analyses."
+    )
 
     ## Distribute jobs to the worker processes
-    log(f"Starting up {ncpus} processes for {nchunks} chunks")
+    logger.info(f"Starting up {ncpus} processes for {nchunks} chunks")
     responses = [pool.apply_async(function, (ctx, chunk_size, i)) for i in range(nchunks)]
-    log("All spawned, waiting for results")
+    logger.info("All spawned, waiting for results")
 
     pool.close()
 

@@ -1,4 +1,5 @@
 import argparse
+import logging
 import os
 from pathlib import Path
 from typing import List
@@ -6,12 +7,12 @@ from typing import List
 import numpy as np
 from oxDNA_analysis_tools.align import svd_align
 from oxDNA_analysis_tools.UTILS.data_structures import Configuration
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
 from oxDNA_analysis_tools.UTILS.RyeReader import describe
 from oxDNA_analysis_tools.UTILS.RyeReader import get_confs
 from oxDNA_analysis_tools.UTILS.RyeReader import inbox
 from oxDNA_analysis_tools.UTILS.RyeReader import write_conf
+
+logger = logging.getLogger(__name__)
 
 
 def superimpose(ref: Configuration, victims: List[str], indexes: np.ndarray = np.array([[]])):
@@ -92,7 +93,8 @@ def main():
     parser = cli_parser(os.path.basename(__file__))
     args = parser.parse_args()
 
-    logger_settings.set_quiet(args.quiet)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
     # run system checks
     from oxDNA_analysis_tools.config import check
 
@@ -151,7 +153,7 @@ def main():
 
     for conf, out in zip(aligned, outputs):
         write_conf(out, conf, include_vel=ref_info.incl_v)
-        log(f"Wrote file {out}")
+        logger.info(f"Wrote file {out}")
 
 
 if __name__ == "__main__":

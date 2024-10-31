@@ -1,3 +1,4 @@
+import logging
 import os
 import pickle
 import re
@@ -10,8 +11,6 @@ from typing import Union
 
 import numpy as np
 from oxDNA_analysis_tools.UTILS.get_confs import cget_confs
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
 
 from .data_structures import *
 from .oat_multiprocesser import get_chunk_size
@@ -60,7 +59,7 @@ def linear_read(traj_info: TrajInfo, top_info: TopInfo, chunk_size: int = -1) ->
         chunk_size = get_chunk_size()
     current_chunk = 0
     while True:
-        log(f"Processed {current_chunk*chunk_size} / {len(traj_info.idxs)} confs", end="\r")
+        logger.info(f"Processed {current_chunk*chunk_size} / {len(traj_info.idxs)} confs", end="\r")
         if current_chunk * chunk_size >= len(traj_info.idxs):
             break
         confs = get_confs(top_info, traj_info, current_chunk * chunk_size, chunk_size)
@@ -159,9 +158,8 @@ def get_top_info(top: str) -> TopInfo:
         if my_top_info[-1] == "5->3":
             my_top_info = my_top_info[:-1]
         else:
-            log(
-                "The old topology format is depreciated and future tools may not support it.  Please update to the new topology format for future simulations.",
-                level="warning",
+            logger.warning(
+                "The old topology format is depreciated and future tools may not support it.  Please update to the new topology format for future simulations."
             )
 
         # There's actually nothing different between the headers once you remove the new marker.
@@ -398,7 +396,7 @@ def strand_describe(top: str) -> Tuple[System, list]:
 
         # With the old topology, we assume that the sytem is homogenous.
         if "U" in [m.btype for m in monomers]:
-            log("RNA detected, all strands will be marked as RNA")
+            logger.info("RNA detected, all strands will be marked as RNA")
             for s in system.strands:
                 s.type = "RNA"
 
@@ -413,8 +411,8 @@ def strand_describe(top: str) -> Tuple[System, list]:
             l = l[:-1]
         else:
             old_top = True
-            print(
-                "WARNING: The old topology format is depreciated and future tools may not support it.  Please update to the new topology format for future simulations."
+            logger.warning(
+                "The old topology format is depreciated and future tools may not support it.  Please update to the new topology format for future simulations."
             )
 
         if old_top:

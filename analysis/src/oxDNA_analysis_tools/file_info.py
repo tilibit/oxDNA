@@ -1,12 +1,13 @@
 import argparse
+import logging
 import os
 from typing import Dict
 from typing import List
 
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
 from oxDNA_analysis_tools.UTILS.RyeReader import describe
 from oxDNA_analysis_tools.UTILS.RyeReader import get_confs
+
+logger = logging.getLogger(__name__)
 
 
 def file_info(trajectories: List) -> Dict:
@@ -93,7 +94,8 @@ def main():
     parser = cli_parser(os.path.basename(__file__))
     args = parser.parse_args()
 
-    logger_settings.set_quiet(args.quiet)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
     # Verify that dependencies are installed and a good version
     from oxDNA_analysis_tools.config import check
 

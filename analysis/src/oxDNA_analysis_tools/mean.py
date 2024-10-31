@@ -1,4 +1,5 @@
 import argparse
+import logging
 import os
 import time
 from collections import namedtuple
@@ -11,8 +12,6 @@ from oxDNA_analysis_tools.align import svd_align
 from oxDNA_analysis_tools.UTILS.data_structures import Configuration
 from oxDNA_analysis_tools.UTILS.data_structures import TopInfo
 from oxDNA_analysis_tools.UTILS.data_structures import TrajInfo
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
 from oxDNA_analysis_tools.UTILS.oat_multiprocesser import oat_multiprocesser
 from oxDNA_analysis_tools.UTILS.RyeReader import describe
 from oxDNA_analysis_tools.UTILS.RyeReader import get_confs
@@ -25,6 +24,8 @@ start_time = time.time()
 # which contains the arguments needed for a parallelized function.
 # We use this style to avoid having to pass variable numbers of arguments to the parallelizer.
 ComputeContext = namedtuple("ComputeContext", ["traj_info", "top_info", "centered_ref_coords", "indexes"])
+
+logger = logging.getLogger(__name__)
 
 
 # This is the function which computes the sum of particle positions for a chunk of a trajectory
@@ -175,7 +176,8 @@ def main():
     args = parser.parse_args()
 
     # Set the verboseness of the logger (0 -> print INFOs, 1 -> only print WARNINGs)
-    logger_settings.set_quiet(args.quiet)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
 
     # Verify that dependencies are installed and a good version
     from oxDNA_analysis_tools.config import check
@@ -225,7 +227,7 @@ def main():
         outfile = args.output[0]
     else:
         outfile = "mean.dat"
-        log(f'No outfile name provided, defaulting to "{outfile}"')
+        logger.info(f'No outfile name provided, defaulting to "{outfile}"')
 
     # Create the mean configuration from the numpy arrays containing the positions and orientations
     # And write it to the outfile
@@ -237,7 +239,7 @@ def main():
         from oxDNA_analysis_tools import deviations
 
         dev_file = args.deviations[0]
-        log("Launching compute_deviations")
+        logger.info("Launching compute_deviations")
 
         RMSDs, RMSFs = deviations.deviations(traj_info, top_info, mean_conf, indexes, ncpus)
         deviations.output(

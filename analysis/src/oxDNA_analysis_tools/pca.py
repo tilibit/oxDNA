@@ -1,4 +1,5 @@
 import argparse
+import logging
 import time
 from collections import namedtuple
 from json import dumps
@@ -13,8 +14,6 @@ from oxDNA_analysis_tools.config import check
 from oxDNA_analysis_tools.UTILS.data_structures import Configuration
 from oxDNA_analysis_tools.UTILS.data_structures import TopInfo
 from oxDNA_analysis_tools.UTILS.data_structures import TrajInfo
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
 from oxDNA_analysis_tools.UTILS.oat_multiprocesser import get_chunk_size
 from oxDNA_analysis_tools.UTILS.oat_multiprocesser import oat_multiprocesser
 from oxDNA_analysis_tools.UTILS.RyeReader import describe
@@ -26,6 +25,8 @@ start_time = time.time()
 ComputeContext_cov = namedtuple("ComputeContext_cov", ["traj_info", "top_info", "centered_ref_coords"])
 
 ComputeContext_map = namedtuple("ComputeContext_map", ["traj_info", "top_info", "centered_ref_coords", "components"])
+
+logger = logging.getLogger(__name__)
 
 
 def align_positions(centered_ref_coords: np.ndarray, coords: np.ndarray) -> np.ndarray:
@@ -145,12 +146,12 @@ def pca(
 
     # now that we have the covatiation matrix we're going to use eigendecomposition to get the principal components.
     # make_heatmap(covariance)
-    log("calculating eigenvectors")
+    logger.info("calculating eigenvectors")
     evalues, evectors = np.linalg.eig(covariation_matrix)  # these eigenvalues are already sorted
     evectors = evectors.T  # vectors come out as the columns of the array
-    log("eigenvectors calculated")
+    logger.info("eigenvectors calculated")
 
-    log("Saving scree plot to scree.png")
+    logger.info("Saving scree plot to scree.png")
     plt.scatter(range(0, len(evalues)), evalues, s=25)
     plt.xlabel("component")
     plt.ylabel("eigenvalue")
@@ -233,7 +234,8 @@ def main():
     parser = cli_parser(path.basename(__file__))
     args = parser.parse_args()
 
-    logger_settings.set_quiet(args.quiet)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
     check(["python", "numpy"])
 
     traj_file = args.trajectory[0]
@@ -262,7 +264,7 @@ def main():
     coordinates, evalues, evectors = pca(traj_info, top_info, align_conf, ncpus)
 
     # make a quick plot from the first three components
-    log("Creating coordinate plot from first three eigenvectors.  Saving to coordinates.png")
+    logger.info("Creating coordinate plot from first three eigenvectors.  Saving to coordinates.png")
     fig = plt.figure()
     ax = fig.add_subplot(projection="3d")
     ax.scatter(coordinates[:, 0], coordinates[:, 1], coordinates[:, 2], c="g", s=25)
@@ -275,7 +277,7 @@ def main():
     else:
         N = 1
     prep_pos_for_json = lambda conf: list(list(p) for p in conf)
-    log(
+    logger.info(
         "Change the number of eigenvalues to sum and display by modifying the N variable in the script.  Current value: {}".format(
             N
         )
@@ -291,11 +293,11 @@ def main():
         with open(f, "w+") as file:
             file.write(dumps({"pca": prep_pos_for_json(output_vectors)}))
 
-    print("--- %s seconds ---" % (time.time() - start_time))
+    logger.info("--- %s seconds ---" % (time.time() - start_time))
 
     # If we're running clustering, feed the linear terms into the clusterer
     if cluster:
-        #    log("Mapping configurations to component space...")
+        #    logger.info("Mapping configurations to component space...")
         #
         #    #If you want to cluster on only some of the components, uncomment this
         #    #coordinates = coordinates[:,0:3]

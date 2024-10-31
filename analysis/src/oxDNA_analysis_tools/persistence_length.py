@@ -1,4 +1,5 @@
 import argparse
+import logging
 import time
 from collections import namedtuple
 from os import path
@@ -9,14 +10,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import oxpy
 from oxDNA_analysis_tools.UTILS.data_structures import TrajInfo
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
 from oxDNA_analysis_tools.UTILS.oat_multiprocesser import oat_multiprocesser
 from oxDNA_analysis_tools.UTILS.RyeReader import describe
 
 start_time = time.time()
 
 ComputeContext = namedtuple("ComputeContext", ["traj_info", "input_file", "n1", "n2"])
+
+logger = logging.getLogger(__name__)
 
 
 def get_r(conf, nucid: int, pair_dict: Dict) -> np.ndarray:
@@ -64,7 +65,7 @@ def compute(ctx: ComputeContext, chunk_size: int, chunk_id: int):
         )
 
         if (not inp["use_average_seq"] or inp.get_bool("use_average_seq")) and "RNA" in inp["interaction_type"]:
-            log("Sequence dependence not set for RNA model, wobble base pairs will be ignored", level="warning")
+            logger.warning("Sequence dependence not set for RNA model, wobble base pairs will be ignored")
 
         backend = oxpy.analysis.AnalysisBackend(inp)
         if backend.config_info().particles()[ctx.n1].strand_id != backend.config_info().particles()[ctx.n2].strand_id:
@@ -91,7 +92,7 @@ def compute(ctx: ComputeContext, chunk_size: int, chunk_id: int):
             for j in range(ctx.n1, ctx.n2):
                 # If there's no base pair, there's no midpoint
                 if not j in pair_dict or not j + 1 in pair_dict:
-                    print(f"WARNING: Nucleotide {j} or {j + 1} is unpaired.  Skipping...")
+                    logger.warning(f"Nucleotide {j} or {j + 1} is unpaired.  Skipping...")
                     continue
 
                 # Get the midpoint of the base pairs
@@ -163,7 +164,7 @@ def fit_PL(correlations: np.ndarray, plt_name: str) -> float:
     """
     # Fit the PL to the correlations
     x = np.arange(0, len(correlations))
-    log_corr = np.log(correlations)
+    log_corr = np.logger.info(correlations)
     A, B = np.polyfit(x, log_corr, 1)
     pl = -1 / A
 
@@ -178,7 +179,7 @@ def fit_PL(correlations: np.ndarray, plt_name: str) -> float:
     plt.legend()
     plt.tight_layout()
     plt.savefig(plt_name, dpi=300)
-    log(f"Saving figure to {plt_name}")
+    logger.info(f"Saving figure to {plt_name}")
 
     return pl
 
@@ -230,7 +231,8 @@ def main():
     parser = cli_parser(path.basename(__file__))
     args = parser.parse_args()
 
-    logger_settings.set_quiet(args.quiet)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
     from oxDNA_analysis_tools.config import check
 
     check(["python", "matplotlib", "numpy", "oxpy"])
@@ -251,7 +253,7 @@ def main():
     l0, correlations = persistence_length(di, inp_file, n1, n2, ncpus)
 
     if args.data:
-        log(f"Writing correlations to {args.data[0]}")
+        logger.info(f"Writing correlations to {args.data[0]}")
         with open(args.data[0], "w+") as f:
             for i, c in enumerate(correlations):
                 f.write(f"{i} {c}\n")

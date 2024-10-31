@@ -1,4 +1,5 @@
 import argparse
+import logging
 import os
 import time
 from collections import namedtuple
@@ -12,8 +13,6 @@ from oxDNA_analysis_tools.align import svd_align
 from oxDNA_analysis_tools.UTILS.data_structures import Configuration
 from oxDNA_analysis_tools.UTILS.data_structures import TopInfo
 from oxDNA_analysis_tools.UTILS.data_structures import TrajInfo
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
 from oxDNA_analysis_tools.UTILS.oat_multiprocesser import get_chunk_size
 from oxDNA_analysis_tools.UTILS.oat_multiprocesser import oat_multiprocesser
 from oxDNA_analysis_tools.UTILS.RyeReader import describe
@@ -23,6 +22,7 @@ from oxDNA_analysis_tools.UTILS.RyeReader import inbox
 start_time = time.time()
 
 ComputeContext = namedtuple("ComputeContext", ["traj_info", "top_info", "mean_coords", "indexes"])
+logger = logging.getLogger(__name__)
 
 
 def compute(ctx: ComputeContext, chunk_size: int, chunk_id: int):
@@ -100,15 +100,15 @@ def output(
         data_file (str): (optional) Name of the oxView order parameter file for the RMSD
     """
     # Save the RMSDs and RMSFs to json files
-    log(f"writing deviations to {outfile}")
+    logger.info(f"writing deviations to {outfile}")
     with open(outfile, "w") as f:
         f.write(dumps({"RMSF (nm)": RMSFs.tolist()}))
 
-    log(f"writing RMSDs to oxView order parameter file, {data_file}")
+    logger.info(f"writing RMSDs to oxView order parameter file, {data_file}")
     with open(data_file, "w") as f:
         f.write(dumps({"RMSD (nm)": RMSDs.tolist()}))
 
-    log(f"writing RMSD plot to {plot_name}")
+    logger.info(f"writing RMSD plot to {plot_name}")
     plt.plot(RMSDs)
     plt.axhline(np.mean(RMSDs), color="red")
     plt.xlabel("Configuration")
@@ -184,7 +184,8 @@ def main():
     args = parser.parse_args()
 
     # system check
-    logger_settings.set_quiet(args.quiet)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
     from oxDNA_analysis_tools.config import check
 
     check(["python", "numpy", "matplotlib"])
@@ -226,7 +227,7 @@ def main():
             outfile += ".json"
     else:
         outfile = "devs.json"
-        log(f'No outfile name provided, defaulting to "{outfile}"')
+        logger.info(f'No outfile name provided, defaulting to "{outfile}"')
 
     # -r names the file to print the RMSD plot to
     if args.rmsd_plot:

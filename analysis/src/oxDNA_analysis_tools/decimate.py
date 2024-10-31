@@ -1,18 +1,19 @@
 import argparse
+import logging
 import os
 import time
 from collections import namedtuple
 from copy import deepcopy
 from typing import Union
 
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
 from oxDNA_analysis_tools.UTILS.oat_multiprocesser import oat_multiprocesser
 from oxDNA_analysis_tools.UTILS.RyeReader import conf_to_str
 from oxDNA_analysis_tools.UTILS.RyeReader import describe
 from oxDNA_analysis_tools.UTILS.RyeReader import get_confs
 
 ComputeContext = namedtuple("ComputeContext", ["traj_info", "top_info"])
+
+logger = logging.getLogger(__name__)
 
 
 def compute(ctx: ComputeContext, chunk_size: int, chunk_id: int):
@@ -54,7 +55,7 @@ def decimate(traj: str, outfile: str, ncpus: int = 1, start: int = 0, stop: Unio
 
         oat_multiprocesser(my_di.nconfs, ncpus, compute, callback, ctx)
 
-    log(f"Wrote decimated trajectory to {outfile}")
+    logger.info(f"Wrote decimated trajectory to {outfile}")
     return
 
 
@@ -99,7 +100,8 @@ def main():
     parser = cli_parser(os.path.basename(__file__))
     args = parser.parse_args()
 
-    logger_settings.set_quiet(args.quiet)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
     from oxDNA_analysis_tools.config import check
 
     check(["python"])

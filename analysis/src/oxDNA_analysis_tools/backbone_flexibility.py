@@ -1,4 +1,5 @@
 import argparse
+import logging
 import os
 import time
 from collections import namedtuple
@@ -10,8 +11,6 @@ import numpy as np
 from oxDNA_analysis_tools.UTILS.data_structures import System
 from oxDNA_analysis_tools.UTILS.data_structures import TopInfo
 from oxDNA_analysis_tools.UTILS.data_structures import TrajInfo
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
 from oxDNA_analysis_tools.UTILS.oat_multiprocesser import oat_multiprocesser
 from oxDNA_analysis_tools.UTILS.RyeReader import describe
 from oxDNA_analysis_tools.UTILS.RyeReader import get_confs
@@ -20,6 +19,7 @@ from oxDNA_analysis_tools.UTILS.RyeReader import strand_describe
 start_time = time.time()
 
 ComputeContext = namedtuple("ComputeContext", ["traj_info", "top_info", "system"])
+logger = logging.getLogger(__name__)
 
 
 def rad2degree(angle: float) -> float:
@@ -175,7 +175,8 @@ def main():
     parser = cli_parser(os.path.basename(__file__))
     args = parser.parse_args()
 
-    logger_settings.set_quiet(args.quiet)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
 
     # run system checks
     from oxDNA_analysis_tools.config import check
@@ -202,20 +203,20 @@ def main():
         out = args.output[0]
     else:
         out = "ramachandran.png"
-        log(f"No output file specified, writing to {out}")
+        logger.info(f"No output file specified, writing to {out}")
 
     plt.scatter(torsions[len(system.strands) :], dihedrals)
     plt.xlabel("torsion_angle")
     plt.ylabel("dihedral_angle")
     plt.tight_layout()
     plt.savefig(out)
-    log(f"Wrote plot to {out}")
+    logger.info(f"Wrote plot to {out}")
 
     if args.data:
         out = args.data[0]
         with open(out, "w") as f:
             f.write(dumps({"torsions": torsions, "dihedrals": dihedrals}))
-        log(f"Wrote angle data to {out}")
+        logger.info(f"Wrote angle data to {out}")
 
     # Maybe some sort of overlay file?  Hard to do since there is 2*nstrands fewer torsions than particles.
 

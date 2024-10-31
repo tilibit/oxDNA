@@ -1,8 +1,10 @@
+import logging
 from typing import Dict
 from typing import List
 
 from oxDNA_analysis_tools.external_force_utils import forces
-from oxDNA_analysis_tools.UTILS.logger import log
+
+logger = logging.getLogger(__name__)
 
 
 def read_force_file(file: str) -> List[Dict]:
@@ -36,7 +38,7 @@ def read_force_file(file: str) -> List[Dict]:
                     l = f.readline()
                 force_list.append(getattr(forces, t)(**args))  # calls the function "t" from module "forces"
             l = f.readline()
-    log(f"read {len(force_list)} forces")
+    logger.info(f"read {len(force_list)} forces")
     return force_list
 
 

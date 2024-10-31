@@ -6,6 +6,7 @@
 # by Scikit.learn's MDS algorithm, then subtracts the contact map of each individual structure from the man
 # This is used to compute a per-nucleotide deviation in the contact map, which can be visualized with oxView
 import argparse
+import logging
 from collections import namedtuple
 from json import dumps
 from os import path
@@ -18,8 +19,6 @@ from oxDNA_analysis_tools.distance import vectorized_min_image
 from oxDNA_analysis_tools.UTILS.data_structures import Configuration
 from oxDNA_analysis_tools.UTILS.data_structures import TopInfo
 from oxDNA_analysis_tools.UTILS.data_structures import TrajInfo
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
 from oxDNA_analysis_tools.UTILS.oat_multiprocesser import oat_multiprocesser
 from oxDNA_analysis_tools.UTILS.RyeReader import describe
 from oxDNA_analysis_tools.UTILS.RyeReader import get_confs
@@ -32,6 +31,8 @@ DevsContext = namedtuple("DevsContext", ["traj_info", "top_info", "masked_mean_c
 
 # at 2.5 you start to see the hard edges caused by end-loops and see some loop interactions
 CUTOFF = 2.5
+
+logger = logging.getLogger(__name__)
 
 
 def make_heatmap(contact_map: np.ndarray):
@@ -101,7 +102,7 @@ def multidimensional_scaling_mean(
     mean_distances = distances / traj_info.nconfs
     masked_mean = np.ma.masked_array(mean_distances, ~(mean_distances < CUTOFF))
 
-    log("fitting local distance data")
+    logger.info("fitting local distance data")
     mds = MDS(n_components=3, metric=True, max_iter=3000, eps=1e-12, dissimilarity="precomputed", n_jobs=1, n_init=1)
     out_coords = mds.fit_transform(
         masked_mean, init=example_conf.positions
@@ -193,7 +194,8 @@ def main():
     parser = cli_parser(path.basename(__file__))
     args = parser.parse_args()
 
-    logger_settings.set_quiet(args.quiet)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
     traj = args.trajectory[0]
     top_info, traj_info = describe(None, traj)
 
@@ -211,10 +213,10 @@ def main():
         outfile = args.output[0]
     else:
         outfile = "mean_mds.dat"
-        log(f'No outfile name provided, defaulting to "{outfile}"')
+        logger.info(f'No outfile name provided, defaulting to "{outfile}"')
 
     write_conf(outfile, mean_conf, include_vel=traj_info.incl_v)
-    log(f"Wrote mean to {outfile}")
+    logger.info(f"Wrote mean to {outfile}")
 
     devs = distance_deviations(traj_info, top_info, masked_mean, ncpus)
 
@@ -223,11 +225,11 @@ def main():
         devfile = args.dev_file[0].split(".")[0] + ".json"
     else:
         devfile = "devs_mds.json"
-        log(f'No deviations file name provided, defaulting to "{devfile}"')
+        logger.info(f'No deviations file name provided, defaulting to "{devfile}"')
 
     with open(devfile, "w") as file:
         file.write(dumps({"contact deviation": list(devs)}))
-    log(f"wrote file {devfile}")
+    logger.info(f"wrote file {devfile}")
 
 
 if __name__ == "__main__":

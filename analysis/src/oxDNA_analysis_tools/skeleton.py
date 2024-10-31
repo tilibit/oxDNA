@@ -1,4 +1,5 @@
 # This script is a skeleton for parallelized trajectory analysis
+import logging
 import time
 
 start_time = time.time()
@@ -6,13 +7,14 @@ import argparse
 import numpy as np
 from os import path
 from collections import namedtuple
-from oxDNA_analysis_tools.UTILS.logger import log, logger_settings
 from oxDNA_analysis_tools.UTILS.RyeReader import describe, get_confs
 from oxDNA_analysis_tools.UTILS.data_structures import TrajInfo, TopInfo
 from oxDNA_analysis_tools.UTILS.oat_multiprocesser import oat_multiprocesser, get_chunk_size
 
 # This could also be a dict or a class instance.  We just like namedtuple
 ComputeContext = namedtuple("ComputeContext", ["top_info", "traj_info", "arrrrrg"])
+
+logger = logging.getLogger(__name__)
 
 
 # The parallelized function which actually does hard things
@@ -85,7 +87,8 @@ def main():
     args = parser.parse_args()
 
     # run system checks
-    logger_settings.set_quiet(args.quiet)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
     from oxDNA_analysis_tools.config import check
 
     check(["python", "numpy"])
@@ -106,7 +109,7 @@ def main():
         outfile = args.output
     else:
         outfile = "out.txt"
-        log(f'No outfile name provided, defaulting to "{outfile}"')
+        logger.info(f'No outfile name provided, defaulting to "{outfile}"')
 
     # Actually process data
     out = skeleton(top_info, traj_info, optional_argument=flag1, ncpus=ncpus)
@@ -114,7 +117,7 @@ def main():
     # Do something more complicated than this for the output
     with open(outfile, "w+") as f:
         f.write(", ".join([str(o) for o in out]))
-        log(f"Wrote output to file {outfile}")
+        logger.info(f"Wrote output to file {outfile}")
 
     print("--- %s seconds ---" % (time.time() - start_time))
 

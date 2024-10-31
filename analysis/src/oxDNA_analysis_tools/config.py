@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 import argparse
+import logging
 from os import path
 from sys import stderr
 from typing import List
 
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
+logger = logging.getLogger(__name__)
 
 
 # checking dependencies to make sure everything is correct
@@ -33,22 +33,21 @@ def check(to_check: List[str] = ["python", "numpy", "matplotlib", "sklearn", "ox
 
     # get version of this package
     oat = __import__("oxDNA_analysis_tools")
-    log(f"oxDNA_analysis_tools version: {oat.__version__}")
-    log(f"running config.py installed at: {path.realpath(__file__)}")
+    logger.info(f"oxDNA_analysis_tools version: {oat.__version__}")
+    logger.info(f"running config.py installed at: {path.realpath(__file__)}")
 
     # check python version
     if "python" in to_check:
         from sys import version_info
 
         ver = ".".join([str(i) for i in version_info[0:2]])
-        log("Python version: {}".format(".".join([str(i) for i in version_info[0:3]])))
+        logger.info("Python version: {}".format(".".join([str(i) for i in version_info[0:3]])))
         if version_info < (3, 9):
             flag = True
-            log(
+            logger.warning(
                 "Some scripts will not run with Python versions earlier than 3.9.  You have {}, please update your environment".format(
                     version_info
-                ),
-                level="warning",
+                )
             )
 
     # check packages
@@ -57,7 +56,7 @@ def check(to_check: List[str] = ["python", "numpy", "matplotlib", "sklearn", "ox
             continue
         try:
             mod = __import__(package)
-            log(f"Package {real_names[package]} found. Version: {mod.__version__}")
+            logger.info(f"Package {real_names[package]} found. Version: {mod.__version__}")
         except:
             flag = True
             # Log doesn't handle errors, but don't raise anything here because we want to continue execution
@@ -71,11 +70,10 @@ def check(to_check: List[str] = ["python", "numpy", "matplotlib", "sklearn", "ox
         ver = float(".".join(mod.__version__.split(".")[0:2]))
         if ver < dependencies[package]:
             flag = True
-            log(
+            logger.info(
                 "Your version for package {} is {}.  This tool was tested using {}.  You may need to update your environment".format(
                     real_names[package], ver, dependencies[package]
-                ),
-                level="warning",
+                )
             )
 
     # Check for numpy header error
@@ -92,9 +90,9 @@ def check(to_check: List[str] = ["python", "numpy", "matplotlib", "sklearn", "ox
         )
 
     if flag:
-        log("Some packages need to be installed/updated.", level="warning")
+        logger.warning("Some packages need to be installed/updated.")
     else:
-        log("No dependency issues found.")
+        logger.info("No dependency issues found.")
 
     return flag
 
@@ -122,8 +120,10 @@ def get_chunk_size():
     try:
         from oxDNA_analysis_tools.UTILS.chunksize import CHUNKSIZE
 
-        log(f"Analyses will be computed in chunks of {CHUNKSIZE} configurations at a time")
-        log("You can modify this number by running oat config -n <number>, which will be persistent between analyses.")
+        logger.info(f"Analyses will be computed in chunks of {CHUNKSIZE} configurations at a time")
+        logger.info(
+            "You can modify this number by running oat config -n <number>, which will be persistent between analyses."
+        )
     except:
         raise Exception(
             "Unable to read chunksize from file. UTILS/chunksize.py should contain a line like CHUNKSIZE = 100"
@@ -152,10 +152,11 @@ def main():
     parser = cli_parser(path.basename(__file__))
     args = parser.parse_args()
 
-    logger_settings.set_quiet(args.quiet)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
     if args.chunk_size:
         set_chunk_size(args.chunk_size)
-        log(f"Future analyses will calculate in blocks of {args.chunk_size} confs at a time")
+        logger.info(f"Future analyses will calculate in blocks of {args.chunk_size} confs at a time")
 
     check(["python", "numpy", "matplotlib", "sklearn", "oxpy"])
 

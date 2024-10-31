@@ -1,10 +1,12 @@
 import argparse
+import logging
 import os
 
 import matplotlib.pyplot as plt
 import numpy as np
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
+
+
+logger = logging.getLogger(__name__)
 
 
 def cli_parser(prog="plot_energy.py"):
@@ -35,7 +37,8 @@ def main():
     parser = cli_parser(os.path.basename(__file__))
     args = parser.parse_args()
 
-    logger_settings.set_quiet(args.quiet)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
     from oxDNA_analysis_tools.config import check
 
     check(["python", "numpy", "matplotlib"])
@@ -62,7 +65,7 @@ def main():
         if hist == line == False:
             raise RuntimeError('Unrecognized graph format\nAccepted formats are "histogram", "trajectory", and "both"')
     else:
-        log("No graph format specified, defaulting to histogram")
+        logger.info("No graph format specified, defaulting to histogram")
         hist = True
 
     all_times = []
@@ -105,7 +108,7 @@ def main():
         plt.xlabel("Energy per particle (SU)")
         plt.ylabel("Normalized frequency")
         if outfile:
-            log(f"Saving histogram to {out}")
+            logger.info(f"Saving histogram to {out}")
             plt.tight_layout()
             plt.savefig(out)
         else:
@@ -127,7 +130,7 @@ def main():
         plt.xlabel("Time (SU)")
         plt.ylabel("Energy (SU)")
         if outfile:
-            log(f"Saving line plot to {out}")
+            logger.info(f"Saving line plot to {out}")
             plt.tight_layout()
             plt.savefig(out)
         else:

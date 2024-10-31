@@ -1,4 +1,5 @@
 import argparse
+import logging
 import os
 from collections import namedtuple
 from time import time
@@ -9,8 +10,6 @@ from oxDNA_analysis_tools.config import check
 from oxDNA_analysis_tools.distance import vectorized_min_image
 from oxDNA_analysis_tools.UTILS.data_structures import TopInfo
 from oxDNA_analysis_tools.UTILS.data_structures import TrajInfo
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
 from oxDNA_analysis_tools.UTILS.oat_multiprocesser import oat_multiprocesser
 from oxDNA_analysis_tools.UTILS.RyeReader import describe
 from oxDNA_analysis_tools.UTILS.RyeReader import get_confs
@@ -18,6 +17,7 @@ from oxDNA_analysis_tools.UTILS.RyeReader import get_confs
 start_time = time()
 
 ComputeContext = namedtuple("ComputeContext", ["traj_info", "top_info"])
+logger = logging.getLogger(__name__)
 
 
 def compute(ctx: ComputeContext, chunk_size: int, chunk_id: int) -> np.ndarray:
@@ -116,7 +116,8 @@ def main():
     # Get arguments and file metadata
     parser = cli_parser(os.path.basename(__file__))
     args = parser.parse_args()
-    logger_settings.set_quiet(args.quiet)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
     traj = args.trajectory[0]
     top_info, traj_info = describe(None, traj)
 
@@ -131,7 +132,7 @@ def main():
     if args.graph:
         graph_name = args.graph[0]
     else:
-        log("No graph name provided, defaulting to 'contact_map.png'")
+        logger.info("No graph name provided, defaulting to 'contact_map.png'")
         graph_name = "contact_map.png"
 
     fig, ax = plt.subplots()
@@ -140,16 +141,16 @@ def main():
     b = fig.colorbar(a, ax=ax)
     b.set_label("distance (nm)", rotation=270, labelpad=15)
     plt.tight_layout()
-    log(f"Saving contact map to '{graph_name}'")
+    logger.info(f"Saving contact map to '{graph_name}'")
     plt.savefig(graph_name)
 
     # Save the contact map as a pickle
     if args.data:
         data_name = args.data[0]
     else:
-        log("No data name provided, defaulting to 'contact_map.pkl'")
+        logger.info("No data name provided, defaulting to 'contact_map.pkl'")
         data_name = "contact_map.pkl"
-    log(f"Saving contact map to '{data_name}'")
+    logger.info(f"Saving contact map to '{data_name}'")
     np.save(data_name, distances)
 
     print("--- %s seconds ---" % (time() - start_time))

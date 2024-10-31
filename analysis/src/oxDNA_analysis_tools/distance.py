@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import argparse
+import logging
 import os
 import time
 from collections import namedtuple
@@ -10,8 +11,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from oxDNA_analysis_tools.UTILS.data_structures import TopInfo
 from oxDNA_analysis_tools.UTILS.data_structures import TrajInfo
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
 from oxDNA_analysis_tools.UTILS.oat_multiprocesser import get_chunk_size
 from oxDNA_analysis_tools.UTILS.oat_multiprocesser import oat_multiprocesser
 from oxDNA_analysis_tools.UTILS.RyeReader import describe
@@ -20,6 +19,8 @@ from oxDNA_analysis_tools.UTILS.RyeReader import get_confs
 start_time = time.time()
 
 ComputeContext = namedtuple("ComputeContext", ["traj_info", "top_info", "p1s", "p2s"])
+
+logger = logging.getLogger(__name__)
 
 
 def min_image(p1: np.ndarray, p2: np.ndarray, box: float) -> float:
@@ -102,7 +103,7 @@ def distance(
             for k, d in enumerate(r):
                 distances[i][k][chunk_size * j : chunk_size * j + len(d)] = d
 
-        log(f"Working on trajectory: {traj_info.path}")
+        logger.info(f"Working on trajectory: {traj_info.path}")
 
         oat_multiprocesser(traj_info.nconfs, ncpus, compute, callback, ctx)
 
@@ -182,7 +183,8 @@ def main():
     parser = cli_parser(os.path.basename(__file__))
     args = parser.parse_args()
 
-    logger_settings.set_quiet(args.quiet)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
     from oxDNA_analysis_tools.config import check
 
     check(["python", "matplotlib", "numpy"])
@@ -219,7 +221,7 @@ def main():
     if args.output:
         outfile = args.output[0]
     else:
-        log('No outfile name provided, defaulting to "distance.png"')
+        logger.info("No outfile name provided, defaulting to distance.png")
         outfile = "distance.png"
 
     # -f defines which type of graph to produce
@@ -236,7 +238,7 @@ def main():
         if hist == lineplt == False:
             raise RuntimeError('Unrecognized graph format\nAccepted formats are "histogram", "trajectory", and "both"')
     else:
-        log("No graph format specified, defaulting to histogram")
+        logger.info("No graph format specified, defaulting to histogram")
         hist = True
 
     # -c makes it run the clusterer on the output
@@ -254,25 +256,23 @@ def main():
     if args.names:
         names = args.names[0]
         if len(names) < n_dists:
-            log(
+            logger.info(
                 "Names list too short.  There are {} items in names and {} distances were calculated.  Will pad with particle IDs".format(
                     len(names), n_dists
-                ),
-                level="warning",
+                )
             )
             for i in range(len(names), len(distances)):
                 names.append(f"{[j for sl in p1ss for j in sl][i]}-{[j for sl in p2ss for j in sl][i]}")
         if len(names) > n_dists:
-            log(
+            logger.info(
                 "Names list too long. There are {} items in names and {} distances were calculated.  Truncating to be the same as distances".format(
                     len(names), n_dists
-                ),
-                level="warning",
+                )
             )
             names = names[:n_dists]
 
     else:
-        log("Defaulting to particle IDs as data series names")
+        logger.info("Defaulting to particle IDs as data series names")
         names = [f"{p1}-{p2}" for p1, p2 in zip([i for sl in p1ss for i in sl], [i for sl in p2ss for i in sl])]
 
     # -d will dump the distances as json files for loading with the trajectories in oxView
@@ -280,7 +280,7 @@ def main():
         from json import dump
 
         if len(trajectories) > 1:
-            log(
+            logger.info(
                 "distance lists from separate trajectories are printed to separate files for oxView compatibility.  Trajectory numbers will be appended to your provided data file name."
             )
             file_names = ["{}_{}.json".format(args.data[0].strip(".json"), i) for i, _ in enumerate(trajectories)]
@@ -293,7 +293,7 @@ def main():
             for n, d in zip(ns, dist_list):
                 obj[n] = d
             with open(file_name, "w+") as f:
-                log(
+                loger.info(
                     "writing data to {}.  This can be opened in oxView using the Order parameter selector".format(
                         file_name
                     )
@@ -359,7 +359,7 @@ def main():
         plt.legend()
         # plt.show()
         plt.tight_layout()
-        log(f"Writing histogram to file {out}")
+        logger.info(f"Writing histogram to file {out}")
         plt.savefig(f"{out}")
 
     # make a trajectory plot
@@ -381,7 +381,7 @@ def main():
         plt.legend()
         # plt.show()
         plt.tight_layout()
-        log(f"Writing trajectory plot to file {out}")
+        logger.info(f"Writing trajectory plot to file {out}")
         plt.savefig(f"{out}")
 
     if cluster == True:

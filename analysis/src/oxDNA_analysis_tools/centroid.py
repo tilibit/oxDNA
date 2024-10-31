@@ -1,4 +1,5 @@
 import argparse
+import logging
 import os
 import time
 from collections import namedtuple
@@ -10,8 +11,6 @@ from oxDNA_analysis_tools.align import svd_align
 from oxDNA_analysis_tools.UTILS.data_structures import Configuration
 from oxDNA_analysis_tools.UTILS.data_structures import TopInfo
 from oxDNA_analysis_tools.UTILS.data_structures import TrajInfo
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
 from oxDNA_analysis_tools.UTILS.oat_multiprocesser import oat_multiprocesser
 from oxDNA_analysis_tools.UTILS.RyeReader import describe
 from oxDNA_analysis_tools.UTILS.RyeReader import get_confs
@@ -21,6 +20,7 @@ from oxDNA_analysis_tools.UTILS.RyeReader import write_conf
 start_time = time.time()
 
 ComputeContext = namedtuple("ComputeContext", ["traj_info", "top_info", "ref_coords", "indexes"])
+logger = logging.getLogger(__name__)
 
 
 def compute_centroid(ctx: ComputeContext, chunk_size, chunk_id: int) -> Tuple[np.ndarray, float, int]:
@@ -150,7 +150,8 @@ def main():
     args = parser.parse_args()
 
     # system check
-    logger_settings.set_quiet(args.quiet)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
     from oxDNA_analysis_tools.config import check
 
     check(["python", "numpy"])
@@ -191,12 +192,12 @@ def main():
         outfile = args.output[0].strip()
     else:
         outfile = "centroid.dat"
-        log(f'No outfile name provided, defaulting to "{outfile}"')
+        logger.info(f'No outfile name provided, defaulting to "{outfile}"')
 
     write_conf(outfile, centroid_candidate, include_vel=traj_info.incl_v)
-    log(f"Wrote centroid to {outfile}")
-    log(f"Min RMSD: {min_RMSD} nm")
-    log(f"Centroid time: {centroid_candidate.time}")
+    logger.info(f"Wrote centroid to {outfile}")
+    logger.info(f"Min RMSD: {min_RMSD} nm")
+    logger.info(f"Centroid time: {centroid_candidate.time}")
 
     print("--- %s seconds ---" % (time.time() - start_time))
 

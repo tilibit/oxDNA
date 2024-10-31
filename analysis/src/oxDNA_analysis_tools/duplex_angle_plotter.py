@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 import argparse
+import logging
 from os import path
 from sys import exit
 from typing import List
 from typing import Tuple
 
 import numpy as np
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
+
+logger = logging.getLogger(__name__)
 
 
 def rad2degree(angle: float) -> float:
@@ -220,7 +221,7 @@ def make_plots(all_angles: List[List[np.ndarray]], names: List[str], outfile: st
         plt.xlim((0, 180))
         plt.xlabel("Angle (degrees)")
         plt.ylabel("Normalized frequency")
-        log(f"Saving histogram to {out}")
+        logger.info(f"Saving histogram to {out}")
         plt.tight_layout()
         plt.savefig(out)
 
@@ -240,7 +241,7 @@ def make_plots(all_angles: List[List[np.ndarray]], names: List[str], outfile: st
         plt.legend(labels=names)
         plt.xlabel("Configuration Number")
         plt.ylabel("Angle (degrees)")
-        log(f"Saving line plot to {out}")
+        logger.info(f"Saving line plot to {out}")
         plt.tight_layout()
         plt.savefig(out)
 
@@ -302,7 +303,8 @@ def main():
     parser = cli_parser(path.basename(__file__))
     args = parser.parse_args()
 
-    logger_settings.set_quiet(args.quiet)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
     from oxDNA_analysis_tools.config import check
 
     check(["python", "numpy", "matplotlib"])
@@ -342,7 +344,7 @@ def main():
     if args.output:
         outfile = args.output
     else:
-        log('No outfile name provided, defaulting to "angle.png"')
+        logger.info("No outfile name provided, defaulting to angle.png")
         outfile = "angle.png"
 
     # -f defines which type of graph to produce
@@ -358,7 +360,7 @@ def main():
         if hist == line == False:
             raise RuntimeError('Unrecognized graph format\nAccepted formats are "histogram", "trajectory", and "both"')
     else:
-        log("No graph format specified, defaulting to histogram")
+        logger.info("No graph format specified, defaulting to histogram")
         hist = True
 
     # actual computation
@@ -368,24 +370,22 @@ def main():
     if args.names:
         names = args.names
         if len(names) < n_angles:
-            log(
+            logger.info(
                 "Names list too short.  There are {} items in names and {} angles were calculated.  Will pad with particle IDs".format(
                     len(names), n_angles
-                ),
-                level="warning",
+                )
             )
             for i in range(len(names), n_angles):
                 names.append(f"{[j for sl in p1s for j in sl][i]}-{[j for sl in p2s for j in sl][i]}")
         if len(names) > n_angles:
-            log(
+            logger.info(
                 "Names list too long. There are {} items in names and {} angles were calculated.  Truncating to be the same as distances".format(
                     len(names), n_angles
-                ),
-                level="warning",
+                )
             )
             names = names[:n_angles]
     else:
-        log("Defaulting to particle IDs as data series names")
+        logger.info("Defaulting to particle IDs as data series names")
         names = [f"{p1}-{p2}" for p1, p2 in zip([i for sl in p1s for i in sl], [i for sl in p2s for i in sl])]
 
     # -d will dump the distances as json files for loading with the trajectories in oxView
@@ -394,7 +394,7 @@ def main():
 
         if len(files) > 1:
             f_names = [path.basename(f) for f in files]
-            log(
+            logger.info(
                 "Angle lists from separate trajectories are printed to separate files for oxView compatibility.  Trajectory names will be appended to your provided data file name."
             )
             file_names = ["{}_{}.json".format(args.data.strip(".json"), i) for i, _ in enumerate(f_names)]
@@ -407,7 +407,7 @@ def main():
             for n, a in zip(ns, ang_list):
                 obj[n] = list(a)
             with open(file_name, "w+") as f:
-                log(
+                logger.info(
                     "Writing data to {}.  This can be opened in oxView using the Order parameter selector".format(
                         file_name
                     )

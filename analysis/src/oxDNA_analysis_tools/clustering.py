@@ -1,4 +1,5 @@
 import argparse
+import logging
 from json import dump
 from json import load
 from os import path
@@ -12,14 +13,14 @@ from matplotlib.colors import ListedColormap
 from oxDNA_analysis_tools.config import check
 from oxDNA_analysis_tools.UTILS.data_structures import TopInfo
 from oxDNA_analysis_tools.UTILS.data_structures import TrajInfo
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
 from oxDNA_analysis_tools.UTILS.RyeReader import conf_to_str
 from oxDNA_analysis_tools.UTILS.RyeReader import describe
 from oxDNA_analysis_tools.UTILS.RyeReader import get_confs
 from oxDNA_analysis_tools.UTILS.RyeReader import linear_read
 from oxDNA_analysis_tools.UTILS.RyeReader import write_conf
 from sklearn.cluster import DBSCAN
+
+logger = logging.getLogger(__name__)
 
 
 def split_trajectory(traj_info, top_info, labs) -> None:
@@ -41,7 +42,7 @@ def split_trajectory(traj_info, top_info, labs) -> None:
         except:
             pass
 
-    log("splitting trajectory...")
+    logger.info("splitting trajectory...")
 
     fnames = ["cluster_" + str(cluster) + ".dat" for cluster in slabs]
     files = [open(f, "w+") for f in fnames]
@@ -55,7 +56,7 @@ def split_trajectory(traj_info, top_info, labs) -> None:
     for f in files:
         f.close()
 
-    log(f"Wrote trajectory files: {fnames}")
+    logger.info(f"Wrote trajectory files: {fnames}")
 
     return
 
@@ -90,7 +91,7 @@ def get_centroid(
         List[int]: The configuration ID for the centroid of each cluster
     """
 
-    log("Finding cluster centroids...")
+    logger.info("Finding cluster centroids...")
     if metric_name == "euclidean":
         points = points[np.newaxis, :, :] - points[:, np.newaxis, :]
         points = np.sum(points**2, axis=2)  # squared distance is still correct distance
@@ -107,7 +108,7 @@ def get_centroid(
         centroid = get_confs(top_info, traj_info, centroid_id, 1)[0]
         fname = "centroid_" + str(cluster) + ".dat"
         write_conf(fname, centroid, include_vel=traj_info.incl_v)
-        log(f"Wrote centroid file {fname}")
+        logger.info(f"Wrote centroid file {fname}")
 
     return cids
 
@@ -140,7 +141,7 @@ def make_plot(op, labels, centroid_ids, interactive_plot, op_names):
 
     n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
 
-    log("Making cluster plot using first three OPs...")
+    logger.info("Making cluster plot using first three OPs...")
     if len(dimensions) == 3:
         fig = plt.figure()
         ax = fig.add_subplot(111, projection="3d")
@@ -181,9 +182,9 @@ def make_plot(op, labels, centroid_ids, interactive_plot, op_names):
             try:
                 anim = animation.FuncAnimation(fig, animate, init_func=init, frames=range(360), interval=20, blit=True)
                 anim.save(plot_file, fps=30, extra_args=["-vcodec", "libx264"])
-                log(f"Saved cluster plot to {plot_file}")
+                logger.info(f"Saved cluster plot to {plot_file}")
             except:
-                print("WARNING: ffmpeg not found, cannot make animated plot, opening interactivley instead")
+                logger.warning("ffmpeg not found, cannot make animated plot, opening interactivley instead")
                 f = init()
                 plt.show()
         else:
@@ -238,7 +239,7 @@ def make_plot(op, labels, centroid_ids, interactive_plot, op_names):
         if not interactive_plot:
             plt.tight_layout()
             plt.savefig(plot_file)
-            log(f"Saved cluster plot to {plot_file}")
+            logger.info(f"Saved cluster plot to {plot_file}")
         else:
             plt.show()
 
@@ -283,12 +284,12 @@ def perform_DBSCAN(
 
     # dump the input as a json file so you can iterate on eps and min_samples
     dump_file = "cluster_data.json"
-    log(f"Serializing input data to {dump_file}")
-    log(f"Run  `oat clustering {dump_file} -e<eps> -m<min_samples>`  to adjust clustering parameters")
+    logger.info(f"Serializing input data to {dump_file}")
+    logger.info(f"Run  `oat clustering {dump_file} -e<eps> -m<min_samples>`  to adjust clustering parameters")
     out = {"data": op.tolist(), "traj": traj_info.path, "metric": metric}
     dump(out, open(dump_file, "w+"))
 
-    log("Running DBSCAN...")
+    logger.info("Running DBSCAN...")
 
     # DBSCAN parameters:
     # eps: the pairwise distance that configurations below are considered neighbors
@@ -297,7 +298,7 @@ def perform_DBSCAN(
     #        If the matrix is already a square distance matrix, the metrix needs to be "precomputed".
     # the eps and min_samples need to be determined for each input based on the values of the input data
     # If you're making your own multidimensional data, you probably want to normalize your data first.
-    log(f"Current values: eps={eps}, min_samples={min_samples}")
+    logger.info(f"Current values: eps={eps}, min_samples={min_samples}")
     db = DBSCAN(eps=eps, min_samples=min_samples, metric=metric).fit(op)
     labels = db.labels_
 
@@ -313,7 +314,7 @@ def perform_DBSCAN(
 
     # If the hyperparameters don't split the data well, end the run before the long stuff.
     if n_clusters_ < min_clusters:
-        log("Did not find the minimum number of clusters requested, returning early")
+        logger.info("Did not find the minimum number of clusters requested, returning early")
         return labels
 
     # Split the trajectory into cluster trajectories
@@ -326,7 +327,7 @@ def perform_DBSCAN(
     # Make a plot showing the clusters
     make_plot(op, labels, centroid_ids, interactive_plot, op_names)
 
-    log(f"Run  `oat clustering {dump_file} -e<eps> -m<min_samples>`  to adjust clustering parameters")
+    logger.info(f"Run  `oat clustering {dump_file} -e<eps> -m<min_samples>`  to adjust clustering parameters")
 
     return labels
 
@@ -365,7 +366,8 @@ def main():
     parser = cli_parser(path.basename(__file__))
     args = parser.parse_args()
 
-    logger_settings.set_quiet(args.quiet)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
     data_file = args.serialized_data[0]
     if args.eps:
         eps = args.eps[0]

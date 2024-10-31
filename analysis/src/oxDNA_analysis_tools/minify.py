@@ -1,4 +1,5 @@
 import argparse
+import logging
 import time
 from collections import namedtuple
 from os import path
@@ -9,8 +10,6 @@ from numpy import round
 from numpy import zeros_like
 from oxDNA_analysis_tools.UTILS.data_structures import TopInfo
 from oxDNA_analysis_tools.UTILS.data_structures import TrajInfo
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
 from oxDNA_analysis_tools.UTILS.oat_multiprocesser import oat_multiprocesser
 from oxDNA_analysis_tools.UTILS.RyeReader import conf_to_str
 from oxDNA_analysis_tools.UTILS.RyeReader import describe
@@ -19,6 +18,8 @@ from oxDNA_analysis_tools.UTILS.RyeReader import get_confs
 start_time = time.time()
 
 ComputeContext = namedtuple("ComputeContext", ["traj_info", "top_info", "d", "a"])
+
+logger = logging.getLogger(__name__)
 
 
 def compute(ctx: ComputeContext, chunk_size: int, chunk_id: int):
@@ -65,7 +66,7 @@ def minify(traj_info: TrajInfo, top_info: TopInfo, out: str, d: Union[int, None]
 
         oat_multiprocesser(traj_info.nconfs, ncpus, compute, callback, ctx)
 
-    log(f"Wrote aligned trajectory to {out}")
+    logger.info(f"Wrote aligned trajectory to {out}")
 
     return
 
@@ -98,7 +99,8 @@ def main():
     parser = cli_parser(path.basename(__file__))
     args = parser.parse_args()
 
-    logger_settings.set_quiet(args.quiet)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
     traj_file = args.trajectory
     out = args.outfile
 

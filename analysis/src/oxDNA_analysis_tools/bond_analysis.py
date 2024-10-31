@@ -1,4 +1,5 @@
 import argparse
+import logging
 import time
 from collections import namedtuple
 from json import dump
@@ -11,8 +12,6 @@ import numpy as np
 import oxpy
 from oxDNA_analysis_tools.UTILS.data_structures import TopInfo
 from oxDNA_analysis_tools.UTILS.data_structures import TrajInfo
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
 from oxDNA_analysis_tools.UTILS.oat_multiprocesser import get_chunk_size
 from oxDNA_analysis_tools.UTILS.oat_multiprocesser import oat_multiprocesser
 from oxDNA_analysis_tools.UTILS.RyeReader import describe
@@ -21,6 +20,7 @@ from oxDNA_analysis_tools.UTILS.RyeReader import get_input_parameter
 start_time = time.time()
 
 ComputeContext = namedtuple("ComputeContext", ["traj_info", "top_info", "designed_pairs", "input_file"])
+logger = logging.getLogger(__name__)
 
 
 # This is the function which gets parallelized
@@ -44,7 +44,7 @@ def compute(
         )
 
         if (not inp["use_average_seq"] or inp.get_bool("use_average_seq")) and "RNA" in inp["interaction_type"]:
-            log("Sequence dependence not set for RNA model, wobble base pairs will be ignored", level="warning")
+            logger.warning("Sequence dependence not set for RNA model, wobble base pairs will be ignored")
 
         # Start up an analysis backend with the input file we just made
         backend = oxpy.analysis.AnalysisBackend(inp)
@@ -138,7 +138,7 @@ def bond_analysis(
 
 
 def oxView_overlay(nt_array: np.ndarray, outfile: str):
-    log(f"Writing bond occupancy data to {outfile}")
+    logger.info(f"Writing bond occupancy data to {outfile}")
     with open(outfile, "w+") as file:
         file.write('{\n"occupancy" : [')
         file.write(str(nt_array[0]))
@@ -216,7 +216,8 @@ def main():
     args = parser.parse_args()
 
     # run system checks
-    logger_settings.set_quiet(args.quiet)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
     from oxDNA_analysis_tools.config import check
 
     check(["python", "numpy", "oxpy"])
@@ -230,13 +231,13 @@ def main():
         outfile = outfile.removesuffix(".json") + ".json"
     else:
         outfile = "bonds.json"
-        log(f'No oxView name provided, defaulting to "{outfile}"')
+        logger.info(f'No oxView name provided, defaulting to "{outfile}"')
     if args.traj_plot:
         plotfile = args.traj_plot
         plotfile = plotfile.removesuffix(".png") + ".png"
     else:
         plotfile = "bonds.png"
-        log(f'No bond plot name provided, defaulting to "{plotfile}"')
+        logger.info(f'No bond plot name provided, defaulting to "{plotfile}"')
 
     # Get trajectory metadata
     top_file = get_input_parameter(inputfile, "topology")
@@ -279,7 +280,7 @@ def main():
                 },
                 f,
             )
-            log(f"Wrote per-step and per-nucleotide bond data to {data_file}")
+            logger.info(f"Wrote per-step and per-nucleotide bond data to {data_file}")
 
     oxView_overlay(nt_array, outfile)
 

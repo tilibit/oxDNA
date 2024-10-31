@@ -1,4 +1,5 @@
 import argparse
+import logging
 import os
 from collections import namedtuple
 from copy import deepcopy
@@ -8,8 +9,6 @@ from oxDNA_analysis_tools.UTILS.data_structures import Configuration
 from oxDNA_analysis_tools.UTILS.data_structures import System
 from oxDNA_analysis_tools.UTILS.data_structures import TopInfo
 from oxDNA_analysis_tools.UTILS.data_structures import TrajInfo
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
 from oxDNA_analysis_tools.UTILS.oat_multiprocesser import oat_multiprocesser
 from oxDNA_analysis_tools.UTILS.RyeReader import conf_to_str
 from oxDNA_analysis_tools.UTILS.RyeReader import describe
@@ -19,6 +18,8 @@ from oxDNA_analysis_tools.UTILS.RyeReader import strand_describe
 
 
 ComputeContext = namedtuple("ComputeContext", ["traj_info", "top_info", "indexes"])
+
+logger = logging.getLogger(__name__)
 
 
 def compute(ctx: ComputeContext, chunk_size: int, chunk_id: int):
@@ -42,7 +43,7 @@ def write_topologies(system: System, indexes: List[List[int]], outfiles: List[st
         new_sys = deepcopy(system)
         for s in new_sys:
             if s[0].n3 != None and s[0].id != s[-1].n5:
-                log(f"Strand {s.id} is circular. Subsetting the trajectory will cut circular strands", level="warning")
+                logger.warning(f"Strand {s.id} is circular. Subsetting the trajectory will cut circular strands")
             s.monomers = [n for n in s if n.id in idx]
 
         new_sys.strands = [s for s in new_sys if len(s.monomers) > 0]
@@ -87,8 +88,8 @@ def subset(
     # Write topology files
     top_names = write_topologies(system, indexes, outfiles, system.strands[0].is_old())
 
-    log(f"Wrote trajectories: {dat_names}")
-    log(f"Wrote topologies: {top_names}")
+    logger.info(f"Wrote trajectories: {dat_names}")
+    logger.info(f"Wrote topologies: {top_names}")
 
 
 def cli_parser(prog="subset_trajectory.py"):
@@ -127,7 +128,8 @@ def main():
     parser = cli_parser(os.path.basename(__file__))
     args = parser.parse_args()
 
-    logger_settings.set_quiet(args.quiet)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
     top_file = args.topology
     traj_file = args.trajectory
     index_files = [i[0] for i in args.index]

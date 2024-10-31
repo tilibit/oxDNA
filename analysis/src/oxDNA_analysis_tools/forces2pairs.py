@@ -4,12 +4,12 @@
 # Python2
 # Converts the forces file printed out by tiamat2oxdna to a pairs file containing all designed H-bonds
 import argparse
+import logging
 import os
 from typing import List
 from typing import Tuple
 
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
+logger = logging.getLogger(__name__)
 
 
 def cli_parser(prog="forces2pairs"):
@@ -62,13 +62,14 @@ def main():
     parser = cli_parser(os.path.basename(__file__))
     args = parser.parse_args()
 
-    logger_settings.set_quiet(args.quiet)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
     infile = args.force_file[0]
 
     try:
         out = args.output[0]
     except:
-        log("No outfile provided, defaulting to pairs.txt")
+        logger.info("No outfile provided, defaulting to pairs.txt")
         out = "pairs.txt"
 
     pairs = forces2pairs(infile)
@@ -77,7 +78,7 @@ def main():
         for p in pairs:
             f.write(f"{p[0]} {p[1]}\n")
 
-    log(f"pairing information written to {out}")
+    logger.info(f"pairing information written to {out}")
 
 
 if __name__ == "__main__":

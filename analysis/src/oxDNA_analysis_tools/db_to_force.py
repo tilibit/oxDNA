@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import logging
 import os
 from typing import Dict
 from typing import List
@@ -7,8 +8,8 @@ from typing import List
 import numpy as np
 from oxDNA_analysis_tools.external_force_utils.force_reader import write_force_file
 from oxDNA_analysis_tools.external_force_utils.forces import mutual_trap
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
+
+logger = logging.getLogger(__name__)
 
 
 def parse_dot_bracket(input: str) -> np.ndarray:
@@ -128,7 +129,8 @@ def main():
     parser = cli_parser(os.path.basename(__file__))
     args = parser.parse_args()
 
-    logger_settings.set_quiet(args.quiet)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
     from oxDNA_analysis_tools.config import check
 
     check(["python", "numpy"])
@@ -139,10 +141,10 @@ def main():
     # Default trap stiffness is 0.09 which won't explode most simulations.
     if args.stiff:
         stiff = args.stiff[0]
-        log(f"Using stiffness {stiff}")
+        logger.info(f"Using stiffness {stiff}")
     else:
         stiff = 0.09
-        log(f"No stiffness provided, defaulting to {stiff}")
+        logger.info(f"No stiffness provided, defaulting to {stiff}")
 
     reverse = args.reverse
 
@@ -150,10 +152,10 @@ def main():
 
     if args.output:
         outfile = args.output[0]
-        log(f"Writing forces to {outfile}")
+        logger.info(f"Writing forces to {outfile}")
     else:
         outfile = "external_forces.txt"
-        log(f"No output filename found.  Defaulting to {outfile}")
+        logger.info(f"No output filename found.  Defaulting to {outfile}")
 
     write_force_file(force_list, outfile)
 

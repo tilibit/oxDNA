@@ -1,4 +1,5 @@
 import argparse
+import logging
 from os import path
 from typing import Any
 from typing import Dict
@@ -6,9 +7,9 @@ from typing import List
 
 from oxDNA_analysis_tools.external_force_utils.force_reader import read_force_file
 from oxDNA_analysis_tools.pairs2db import pairs2db
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
 from oxDNA_analysis_tools.UTILS.RyeReader import strand_describe
+
+logger = logging.getLogger(__name__)
 
 
 def cli_parser(prog="forces2db"):
@@ -52,7 +53,8 @@ def main():
     args = parser.parse_args()
 
     # run system checks
-    logger_settings.set_quiet(args.quiet)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
     from oxDNA_analysis_tools.config import check
 
     check(["python"])
@@ -69,7 +71,7 @@ def main():
     if args.output:
         out = args.output
     else:
-        log("No outfile provided, printing to screen")
+        logger.info("No outfile provided, printing to screen")
         print(seq)
         print(db)
         exit(0)
@@ -77,7 +79,7 @@ def main():
     with open(out, "w+") as f:
         f.write(seq + "\n")
         f.write(db + "\n")
-        log(f"Wrote dot-bracket to file {out}.")
+        logger.info(f"Wrote dot-bracket to file {out}.")
 
 
 if __name__ == "__main__":

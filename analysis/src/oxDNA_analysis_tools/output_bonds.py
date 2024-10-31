@@ -1,4 +1,5 @@
 import argparse
+import logging
 from collections import namedtuple
 from os import path
 from typing import List
@@ -7,11 +8,11 @@ import numpy as np
 import oxpy
 from oxDNA_analysis_tools.UTILS.data_structures import TopInfo
 from oxDNA_analysis_tools.UTILS.data_structures import TrajInfo
-from oxDNA_analysis_tools.UTILS.logger import log
-from oxDNA_analysis_tools.UTILS.logger import logger_settings
 from oxDNA_analysis_tools.UTILS.oat_multiprocesser import oat_multiprocesser
 from oxDNA_analysis_tools.UTILS.RyeReader import describe
 from oxDNA_analysis_tools.UTILS.RyeReader import get_input_parameter
+
+logger = logging.getLogger(__name__)
 
 ComputeContext = namedtuple(
     "ComputeContext", ["traj_info", "top_info", "input_file", "visualize", "conversion_factor", "n_potentials"]
@@ -67,7 +68,7 @@ def compute(ctx: ComputeContext, chunk_size: int, chunk_id: int):
         )
 
         if (not inp["use_average_seq"] or inp.get_bool("use_average_seq")) and "RNA" in inp["interaction_type"]:
-            log("Sequence dependence not set for RNA model, wobble base pairs will be ignored", level="warning")
+            logger.warning("Sequence dependence not set for RNA model, wobble base pairs will be ignored")
 
         backend = oxpy.analysis.AnalysisBackend(inp)
 
@@ -209,7 +210,8 @@ def main():
     parser = cli_parser(path.basename(__file__))
     args = parser.parse_args()
 
-    logger_settings.set_quiet(args.quiet)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
     from oxDNA_analysis_tools.config import check
 
     check(["python", "numpy", "oxpy"])
@@ -248,7 +250,7 @@ def main():
     else:
         units = "oxDNA su"
         conversion_factor = 1
-        log("no units specified, assuming oxDNA su")
+        logger.info("no units specified, assuming oxDNA su")
 
     energies, potentials = output_bonds(traj_info, top_info, inputfile, visualize, conversion_factor, ncpus)
 
@@ -263,7 +265,7 @@ def main():
                 f.write(f'{{\n"{potential} ({units})" : [')
                 f.write(", ".join([str(x) for x in energies[:, i]]))
                 f.write("]\n}")
-            log(f"Wrote oxView overlay to: {fname}")
+            logger.info(f"Wrote oxView overlay to: {fname}")
 
 
 if __name__ == "__main__":

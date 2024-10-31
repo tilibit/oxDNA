@@ -1,5 +1,6 @@
 import argparse
 import json
+import logging
 import os
 
 import numpy as np
@@ -9,6 +10,9 @@ from oxDNA_analysis_tools.UTILS.RyeReader import describe
 from oxDNA_analysis_tools.UTILS.RyeReader import get_confs
 from oxDNA_analysis_tools.UTILS.RyeReader import inbox
 from oxDNA_analysis_tools.UTILS.RyeReader import linear_read
+
+
+logger = logging.getLogger(__name__)
 
 
 # calculate the position of the super particle
